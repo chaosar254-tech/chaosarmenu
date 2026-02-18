@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Dashboard input text color fix */
+input,
+textarea,
+select {
+  color: #111827; /* koyu siyah-gri */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af; /* gri placeholder */
+}
+
+/* Dark mode input styles - Force white text on dark background */
+/* Support both media query and class-based dark mode */
+@media (prefers-color-scheme: dark) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  textarea,
+  select {
+    color: #ffffff !important; /* Force white text in dark mode */
+    background-color: #18181b !important; /* zinc-900 */
+    border-color: #3f3f46 !important; /* zinc-700 */
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"])::placeholder,
+  textarea::placeholder {
+    color: #a1a1aa !important; /* zinc-400 */
+  }
+
+  /* Select options in dark mode */
+  select option {
+    background-color: #18181b !important;
+    color: #ffffff !important;
+  }
+}
+
+/* Class-based dark mode support (if using .dark class) */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.dark textarea,
+.dark select {
+  color: #ffffff !important;
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"])::placeholder,
+.dark textarea::placeholder {
+  color: #a1a1aa !important;
+}
+
+.dark select option {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+
+

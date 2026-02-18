@@ -1,0 +1,29 @@
+{
+  "name": "customer-menu",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:all": "concurrently \"npm run dev:dashboard\" \"npm run dev:menu\" \"npm run dev:menu-template-2\" \"npm run dev:admin\" \"npm run dev:web\"",
+    "dev:dashboard": "cd apps/dashboard && npm run dev",
+    "dev:menu": "cd apps/menu && npm run dev",
+    "dev:menu-template-2": "cd apps/menu-template-2 && npm run dev",
+    "dev:admin": "cd apps/admin && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "seed": "node scripts/seed.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  }
+}
+

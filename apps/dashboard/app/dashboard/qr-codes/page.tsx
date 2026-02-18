@@ -1,0 +1,38 @@
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import QRCodeManagement from '@/components/QRCodeManagement'
+
+export default async function QRCodesPage() {
+  const cookieStore = await cookies()
+  const supabase = createServerSupabaseClient(cookieStore)
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id, slug')
+    .eq('owner_user_id', user.id)
+    .single()
+
+  if (!restaurant) {
+    redirect('/dashboard')
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">QR Kodlar</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          QR kodlarınızı oluşturun ve yönetin
+        </p>
+      </div>
+      <QRCodeManagement restaurant={restaurant} />
+    </div>
+  )
+}
+

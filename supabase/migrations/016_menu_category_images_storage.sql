@@ -1,0 +1,47 @@
+-- Storage RLS policies for menu_category_images bucket
+-- Multi-tenant: restaurant owners can only access their own category images
+-- Path convention: categories/{restaurant.id}/{filename}
+--
+-- IMPORTANT: Policies must be created via Supabase Dashboard UI:
+-- Storage > Policies > menu_category_images bucket
+--
+-- Policy structure (for reference):
+-- 
+-- INSERT Policy:
+-- - Name: "Users can upload category images for own restaurants"
+-- - Target roles: authenticated
+-- - USING expression: (empty for INSERT)
+-- - WITH CHECK expression:
+--   bucket_id = 'menu_category_images'
+--   AND split_part(name, '/', 1) = 'categories'
+--   AND EXISTS (
+--     SELECT 1
+--     FROM public.restaurants r
+--     WHERE r.id::text = split_part(name, '/', 2)
+--     AND r.owner_user_id = auth.uid()
+--   )
+--
+-- SELECT/UPDATE/DELETE Policy:
+-- - Name: "Users can manage category images for own restaurants"
+-- - Target roles: authenticated
+-- - USING expression:
+--   bucket_id = 'menu_category_images'
+--   AND split_part(name, '/', 1) = 'categories'
+--   AND EXISTS (
+--     SELECT 1
+--     FROM public.restaurants r
+--     WHERE r.id::text = split_part(name, '/', 2)
+--     AND r.owner_user_id = auth.uid()
+--   )
+-- - WITH CHECK expression: (same as USING)
+--
+-- Path format explanation:
+-- - split_part(name, '/', 1) = 'categories' (first segment)
+-- - split_part(name, '/', 2) = restaurant.id (UUID) (second segment)
+-- - split_part(name, '/', 3) = filename (third segment, can contain any chars including extension)
+--
+-- Example path: categories/123e4567-e89b-12d3-a456-426614174000/uuid-original-name.jpg
+
+-- Note: Public read access is handled via signed URLs in the API
+-- No public SELECT policy needed as bucket is private
+
