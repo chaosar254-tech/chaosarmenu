@@ -265,7 +265,7 @@ export default function MissingItemsClient({ items, restaurantPlan }: MissingIte
       const itemsToUpdate = sortedItems.filter(item => selectedItemIds.has(item.id))
       
       // Get categories for items
-      const categoryIds = [...new Set(itemsToUpdate.map(item => item.category_id))]
+      const categoryIds = Array.from(new Set(itemsToUpdate.map(item => item.category_id)))
       const { data: categoriesData } = await supabase
         .from('menu_categories')
         .select('id, name')

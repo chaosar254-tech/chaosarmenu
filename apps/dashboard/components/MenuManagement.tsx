@@ -19,6 +19,14 @@ interface Category {
   image_url?: string | null
 }
 
+interface Subcategory {
+  id: string
+  name: string
+  sort_order: number
+  is_active: boolean
+  category_id: string
+}
+
 interface MenuItem {
   id: string
   name: string
@@ -27,6 +35,7 @@ interface MenuItem {
   image_url: string | null // Legacy field
   image_path: string | null // Storage path
   category_id: string
+  subcategory_id?: string | null
   is_active: boolean
   sort_order: number
   has_ar?: boolean
@@ -66,8 +75,16 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
   const [branchOverrides, setBranchOverrides] = useState<Record<string, any>>({})
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showItemModal, setShowItemModal] = useState(false)
+  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
+  const [subcategoryCategory, setSubcategoryCategory] = useState<Category | null>(null)
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
+  const [subcategoriesLoading, setSubcategoriesLoading] = useState(false)
+  const [newSubcategoryName, setNewSubcategoryName] = useState('')
+  const [editingSubcategoryId, setEditingSubcategoryId] = useState<string | null>(null)
+  const [editingSubcategoryName, setEditingSubcategoryName] = useState('')
+  const [subcategoriesSaving, setSubcategoriesSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [optimizingImage, setOptimizingImage] = useState(false)
@@ -99,9 +116,12 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
   const [itemSearchQuery, setItemSearchQuery] = useState('')
   const [categorySearchQuery, setCategorySearchQuery] = useState('')
   const [recommendedItemsSearchQuery, setRecommendedItemsSearchQuery] = useState('')
+  const [categorySubcategories, setCategorySubcategories] = useState<Subcategory[]>([])
+  const [categorySubcategoriesLoading, setCategorySubcategoriesLoading] = useState(false)
   // Form state for item inputs (to preserve values when switching tabs)
   const [itemFormData, setItemFormData] = useState({
     category_id: '',
+    subcategory_id: '',
     name: '',
     description: '',
     price: '',
@@ -159,7 +179,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       // Load items filtered by branch_id
       const { data: its, error: itemsError } = await supabase
         .from('menu_items')
-        .select('id, name, description, price, image_url, image_path, category_id, is_active, sort_order, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, name_en, name_ar, description_en, description_ar')
+        .select('id, name, description, price, image_url, image_path, category_id, subcategory_id, is_active, sort_order, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, name_en, name_ar, description_en, description_ar')
         .eq('branch_id', activeBranchId)
         .order('sort_order', { ascending: true })
 
@@ -407,7 +427,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       restaurantId,
     })
     
-      if (!categoryId) {
+    if (!categoryId) {
         toast.error('Kategori seçiniz')
         setSubmittingItem(false)
         return
@@ -419,9 +439,10 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
     // For new items: create item first, then upload image with proper path
     if (!editingItem && optimizedImageBlob) {
       // Create item without image first (branch_id will be set by server from cookie)
-      const createData = {
+        const createData = {
         restaurant_id: restaurantId,
         category_id: categoryId,
+          subcategory_id: itemFormData.subcategory_id || null,
         name: itemFormData.name,
         description: itemFormData.description || null,
         price: parseFloat(itemFormData.price) || 0,
@@ -485,6 +506,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
             id: createdItemId,
             restaurant_id: restaurantId,
             category_id: categoryId,
+            subcategory_id: itemFormData.subcategory_id || null,
             name: itemFormData.name,
             description: itemFormData.description || null,
             price: parseFloat(itemFormData.price) || 0,
@@ -531,7 +553,11 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       setItemFormData({
         category_id: '',
         name: '',
+        name_en: '',
+        name_ar: '',
         description: '',
+        description_en: '',
+        description_ar: '',
         price: '',
         sort_order: '',
         is_active: true,
@@ -582,6 +608,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
     const data = {
       restaurant_id: restaurantId,
       category_id: categoryId,
+      subcategory_id: itemFormData.subcategory_id || editingItem?.subcategory_id || null,
       name,
       description,
       price,
@@ -800,6 +827,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
     // Set form data from item
     setItemFormData({
       category_id: item.category_id || '',
+      subcategory_id: item.subcategory_id || '',
       name: item.name || '',
       description: item.description || '',
       price: item.price?.toString() || '',
@@ -813,6 +841,26 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       description_en: item.description_en ?? '',
       description_ar: item.description_ar ?? '',
     })
+    // Load subcategories for the item's category so subcategory dropdown is populated
+    if (item.category_id) {
+      void (async () => {
+        try {
+          setCategorySubcategoriesLoading(true)
+          const response = await fetch(`/api/subcategories?category_id=${encodeURIComponent(item.category_id)}`)
+          const result = await response.json()
+          if (!response.ok) {
+            throw new Error(result.error || 'Alt kategoriler yüklenemedi')
+          }
+          setCategorySubcategories(result.data || [])
+        } catch (error) {
+          console.error('[MenuManagement] Failed to load subcategories for edit:', error)
+        } finally {
+          setCategorySubcategoriesLoading(false)
+        }
+      })()
+    } else {
+      setCategorySubcategories([])
+    }
     setShowItemModal(true)
   }
 
@@ -843,10 +891,12 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
     setSelectedRecommendedItems([])
     setSelectedAllergens([])
     setRecommendedItemsSearchQuery('')
+    setCategorySubcategories([])
     setActiveItemTab('genel')
     // Reset form data for new item
     setItemFormData({
       category_id: '',
+      subcategory_id: '',
       name: '',
       description: '',
       price: '',
@@ -913,6 +963,152 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       loadData()
     } catch (error: any) {
       toast.error('Hata: ' + error.message)
+    }
+  }
+
+  const loadSubcategoriesForCategory = async (categoryId: string) => {
+    try {
+      setSubcategoriesLoading(true)
+      const response = await fetch(`/api/subcategories?category_id=${encodeURIComponent(categoryId)}`)
+      const result = await response.json()
+      if (!response.ok) {
+        console.error('[Subcategories] Load failed:', result)
+        throw new Error(result.error || 'Alt kategoriler yüklenemedi')
+      }
+      setSubcategories(result.data || [])
+    } catch (error: any) {
+      console.error('[Subcategories] Load error:', error)
+      toast.error(error.message || 'Alt kategoriler yüklenirken hata oluştu')
+    } finally {
+      setSubcategoriesLoading(false)
+    }
+  }
+
+  const handleOpenSubcategoryModal = (category: Category) => {
+    setSubcategoryCategory(category)
+    setNewSubcategoryName('')
+    setEditingSubcategoryId(null)
+    setEditingSubcategoryName('')
+    setShowSubcategoryModal(true)
+    void loadSubcategoriesForCategory(category.id)
+  }
+
+  const handleCreateSubcategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!subcategoryCategory) return
+
+    if (!hasActiveSubscription) {
+      toast.error('Aboneliğiniz sona ermiş. Devam etmek için lütfen ödeme yapın.')
+      router.push('/dashboard/billing')
+      return
+    }
+
+    const name = newSubcategoryName.trim()
+    if (!name) {
+      toast.error('Alt kategori adı giriniz')
+      return
+    }
+
+    try {
+      setSubcategoriesSaving(true)
+      const response = await fetch('/api/subcategories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category_id: subcategoryCategory.id,
+          name,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        console.error('[Subcategories] Create failed:', result)
+        throw new Error(result.error || 'Alt kategori oluşturulamadı')
+      }
+      toast.success('Alt kategori eklendi')
+      setNewSubcategoryName('')
+      await loadSubcategoriesForCategory(subcategoryCategory.id)
+    } catch (error: any) {
+      toast.error(error.message || 'Alt kategori eklenirken hata oluştu')
+    } finally {
+      setSubcategoriesSaving(false)
+    }
+  }
+
+  const handleStartEditSubcategory = (sub: Subcategory) => {
+    setEditingSubcategoryId(sub.id)
+    setEditingSubcategoryName(sub.name)
+  }
+
+  const handleSaveEditSubcategory = async () => {
+    if (!subcategoryCategory || !editingSubcategoryId) return
+
+    if (!hasActiveSubscription) {
+      toast.error('Aboneliğiniz sona ermiş. Devam etmek için lütfen ödeme yapın.')
+      router.push('/dashboard/billing')
+      return
+    }
+
+    const name = editingSubcategoryName.trim()
+    if (!name) {
+      toast.error('Alt kategori adı giriniz')
+      return
+    }
+
+    try {
+      setSubcategoriesSaving(true)
+      const response = await fetch('/api/subcategories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingSubcategoryId,
+          name,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        console.error('[Subcategories] Update failed:', result)
+        throw new Error(result.error || 'Alt kategori güncellenemedi')
+      }
+      toast.success('Alt kategori güncellendi')
+      setEditingSubcategoryId(null)
+      setEditingSubcategoryName('')
+      await loadSubcategoriesForCategory(subcategoryCategory.id)
+    } catch (error: any) {
+      toast.error(error.message || 'Alt kategori güncellenirken hata oluştu')
+    } finally {
+      setSubcategoriesSaving(false)
+    }
+  }
+
+  const handleDeleteSubcategory = async (id: string) => {
+    if (!subcategoryCategory) return
+
+    if (!hasActiveSubscription) {
+      toast.error('Aboneliğiniz sona ermiş. Devam etmek için lütfen ödeme yapın.')
+      router.push('/dashboard/billing')
+      return
+    }
+
+    if (!confirm('Bu alt kategoriyi silmek istediğinize emin misiniz?')) return
+
+    try {
+      setSubcategoriesSaving(true)
+      const response = await fetch('/api/subcategories', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        console.error('[Subcategories] Delete failed:', result)
+        throw new Error(result.error || 'Alt kategori silinemedi')
+      }
+      toast.success('Alt kategori silindi')
+      await loadSubcategoriesForCategory(subcategoryCategory.id)
+    } catch (error: any) {
+      toast.error(error.message || 'Alt kategori silinirken hata oluştu')
+    } finally {
+      setSubcategoriesSaving(false)
     }
   }
 
@@ -1138,7 +1334,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                         {category.is_active ? 'Aktif' : 'Pasif'}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                       <button
                         onClick={() => {
                           setEditingCategory(category)
@@ -1147,9 +1343,15 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                           setOptimizedCategoryImageBlob(null)
                           setShowCategoryModal(true)
                         }}
-                        className="text-primary-600 hover:text-primary-900 mr-4"
+                        className="text-primary-600 hover:text-primary-900"
                       >
                         Düzenle
+                      </button>
+                      <button
+                        onClick={() => handleOpenSubcategoryModal(category)}
+                        className="text-gray-600 hover:text-gray-900"
+                      >
+                        Alt Kategoriler
                       </button>
                       <button
                         onClick={() => handleDeleteCategory(category.id)}
@@ -1157,7 +1359,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                       >
                         Sil
                       </button>
-                      </td>
+                    </td>
                     </tr>
                   ))
                     )}
@@ -1206,12 +1408,18 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                       Düzenle
                     </button>
                     <button
+                      onClick={() => handleOpenSubcategoryModal(category)}
+                      className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      Alt Kategoriler
+                    </button>
+                    <button
                       onClick={() => handleDeleteCategory(category.id)}
                       className="flex-1 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-900 border border-red-600 rounded-md hover:bg-red-50"
                     >
                       Sil
                     </button>
-                    </div>
+                  </div>
                   </div>
                 ))
                 )}
@@ -1680,6 +1888,134 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
         </div>
       )}
 
+      {/* Subcategory Modal */}
+      {showSubcategoryModal && subcategoryCategory && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto z-50 flex items-start justify-center p-4">
+          <div className="relative w-full max-w-md mt-4 mb-4 p-4 sm:p-5 border shadow-lg rounded-md bg-white max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Alt Kategoriler</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Ana kategori: <span className="font-medium">{subcategoryCategory.name}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSubcategoryModal(false)
+                  setSubcategoryCategory(null)
+                  setSubcategories([])
+                  setNewSubcategoryName('')
+                  setEditingSubcategoryId(null)
+                  setEditingSubcategoryName('')
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubcategory} className="mb-4 flex gap-2">
+              <input
+                type="text"
+                value={newSubcategoryName}
+                onChange={(e) => setNewSubcategoryName(e.target.value)}
+                placeholder="Alt kategori adı..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm"
+                disabled={subcategoriesSaving}
+              >
+                {subcategoriesSaving ? 'Ekleniyor...' : 'Ekle'}
+              </button>
+            </form>
+
+            {subcategoriesLoading ? (
+              <p className="text-sm text-gray-500">Alt kategoriler yükleniyor...</p>
+            ) : subcategories.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                Bu kategori için henüz alt kategori eklenmemiş.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {subcategories.map((sub) => {
+                  const isEditing = editingSubcategoryId === sub.id
+                  return (
+                    <li
+                      key={sub.id}
+                      className="flex items-center justify-between gap-2 border border-gray-200 rounded-md px-3 py-2"
+                    >
+                      <div className="flex-1 min-w-0">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editingSubcategoryName}
+                            onChange={(e) => setEditingSubcategoryName(e.target.value)}
+                            className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
+                          />
+                        ) : (
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {sub.name}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Sıra: {sub.sort_order}{' '}
+                          {sub.is_active ? '(Aktif)' : '(Pasif)'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isEditing ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handleSaveEditSubcategory}
+                              className="px-2 py-1 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                              disabled={subcategoriesSaving}
+                            >
+                              Kaydet
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingSubcategoryId(null)
+                                setEditingSubcategoryName('')
+                              }}
+                              className="px-2 py-1 text-xs border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700"
+                            >
+                              İptal
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditSubcategory(sub)}
+                              className="px-2 py-1 text-xs text-primary-600 hover:text-primary-900"
+                            >
+                              Düzenle
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSubcategory(sub.id)}
+                              className="px-2 py-1 text-xs text-red-600 hover:text-red-900"
+                              disabled={subcategoriesSaving}
+                            >
+                              Sil
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Item Modal - Tab-Based */}
       {showItemModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto z-50 flex items-start justify-center p-4">
@@ -1748,7 +2084,26 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                       name="category_id"
                       required
                       value={itemFormData.category_id}
-                      onChange={(e) => setItemFormData({ ...itemFormData, category_id: e.target.value })}
+                      onChange={async (e) => {
+                        const value = e.target.value
+                        setItemFormData({ ...itemFormData, category_id: value, subcategory_id: '' })
+                        setCategorySubcategories([])
+                        if (!value) return
+                        try {
+                          setCategorySubcategoriesLoading(true)
+                          const response = await fetch(`/api/subcategories?category_id=${encodeURIComponent(value)}`)
+                          const result = await response.json()
+                          if (!response.ok) {
+                            throw new Error(result.error || 'Alt kategoriler yüklenemedi')
+                          }
+                          setCategorySubcategories(result.data || [])
+                        } catch (error: any) {
+                          console.error('[MenuManagement] Failed to load subcategories for category change:', error)
+                          toast.error(error.message || 'Alt kategoriler yüklenirken hata oluştu')
+                        } finally {
+                          setCategorySubcategoriesLoading(false)
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
                       <option value="">Seçiniz</option>
@@ -1758,6 +2113,31 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                         </option>
                       ))}
                     </select>
+                    {categorySubcategoriesLoading && (
+                      <p className="mt-1 text-xs text-gray-500">Alt kategoriler yükleniyor...</p>
+                    )}
+                    {!categorySubcategoriesLoading && categorySubcategories.length > 0 && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Alt Kategori (opsiyonel)
+                        </label>
+                        <select
+                          name="subcategory_id"
+                          value={itemFormData.subcategory_id}
+                          onChange={(e) =>
+                            setItemFormData({ ...itemFormData, subcategory_id: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        >
+                          <option value="">Seçiniz</option>
+                          {categorySubcategories.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              {sub.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
 
                   <div>

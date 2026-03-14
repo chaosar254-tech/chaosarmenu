@@ -781,6 +781,9 @@ export function ClassicTheme({
           <div className="container mx-auto">
             {categories.map((category) => {
               const categoryProducts = products.filter((p) => p.category_id === category.id);
+              if (categoryProducts.length === 0) return null;
+              // If a category is selected, only render that category's section
+              if (selectedCategory && category.id !== selectedCategory) return null;
               return (
                 <section
                   key={category.id}

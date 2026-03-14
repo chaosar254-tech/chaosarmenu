@@ -12,6 +12,8 @@ export const Button: React.FC<ButtonProps> = ({
   size = "md",
   children,
   className = "",
+  onAnimationStart: _,
+  onAnimationEnd: __,
   ...props
 }) => {
   const baseStyles = "font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";

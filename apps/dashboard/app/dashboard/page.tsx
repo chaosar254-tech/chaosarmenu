@@ -5,6 +5,7 @@ import Link from 'next/link'
 import DashboardClient from '@/components/DashboardClient'
 import { getActiveBranchId } from '@/lib/branch-utils'
 import { HealthIssue } from '@/components/HealthIssueList'
+import SignOutToLoginButton from '@/components/SignOutToLoginButton'
 
 export default async function DashboardPage() {
   const cookieStore = await cookies()
@@ -82,6 +83,7 @@ export default async function DashboardPage() {
             <li>Admin panelinden hesabınıza bir restoran atanması gerekiyor.</li>
             <li>Veya yeni bir restoran hesabı oluşturmanız gerekiyor.</li>
           </ul>
+          <SignOutToLoginButton />
         </div>
 
         <div className="mt-6 p-4 bg-gray-100 rounded-md text-left text-sm text-gray-700">

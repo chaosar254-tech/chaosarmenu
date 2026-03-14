@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       : calculateNextPeriodEnd()
 
     console.log('[Iyzico Callback GET] Veritabanı güncelleniyor (restaurants)...')
-    const { error: updateError } = await adminClient
+    const { error: updateError } = await (adminClient as any)
       .from('restaurants')
       .update({
         is_active: true,
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     }
 
     const amount = getPlanAmount(subscriptionPlan, periodParam)
-    await adminClient.from('payments').insert({
+    await (adminClient as any).from('payments').insert({
       restaurant_id: restaurantId,
       amount,
       plan: subscriptionPlan,
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
       status: 'success',
       paid_at: new Date().toISOString(),
       iyzico_reference: result.referenceCode,
-    }).then(({ error: payErr }) => {
+    }).then(({ error: payErr }: { error: unknown }) => {
       if (payErr) console.error('[Iyzico Callback GET] payments insert:', payErr)
     })
 
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
 
     step = 'post_db_update'
     console.log('[Iyzico Callback POST] Veritabanı güncelleniyor (restaurants)...')
-    const { error: updateError } = await adminClient
+    const { error: updateError } = await (adminClient as any)
       .from('restaurants')
       .update({
         is_active: true,
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
     }
 
     const amount = getPlanAmount(subscriptionPlan, period)
-    await adminClient.from('payments').insert({
+    await (adminClient.from('payments') as any).insert({
       restaurant_id: restaurantId,
       amount,
       plan: subscriptionPlan,
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
       status: 'success',
       paid_at: new Date().toISOString(),
       iyzico_reference: result.referenceCode,
-    }).then(({ error: payErr }) => {
+    }).then(({ error: payErr }: { error: unknown }) => {
       if (payErr) console.error('[Iyzico Callback POST] payments insert:', payErr)
     })
 

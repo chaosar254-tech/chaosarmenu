@@ -1,10 +1,7 @@
 /**
  * Client-side Supabase client for browser use.
- * This file is safe to import in client components ("use client").
- * Uses environment variables from Vercel.
- * 
- * Uses createBrowserClient from @supabase/ssr for proper cookie handling
- * that works with Next.js middleware.
+ * Bu dosya sadece client component'lerde import edilmelidir.
+ * Ortak cookie domain'i ve güvenli ayarlarla @supabase/ssr createBrowserClient kullanır.
  */
 
 import { createBrowserClient } from '@supabase/ssr'
@@ -65,35 +62,23 @@ export function createSupabaseBrowserClient() {
 
   console.log('[Supabase Client] Initialized with URL:', supabaseUrl)
 
-  supabaseBrowserClient = createBrowserClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          if (typeof document === 'undefined') return []
-          // Manually parse cookies for debugging
-          return document.cookie.split(';').map((c) => {
-            const [key, ...v] = c.split('=')
-            return { name: key.trim(), value: v.join('=') }
-          })
-        },
-      },
-      cookieOptions: {
-        name: 'sb-auth-token',
-        path: '/',
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        domain: (() => {
-          if (typeof window === 'undefined') return undefined
-          const hostname = window.location.hostname
-          if (hostname === 'localhost' || hostname === '127.0.0.1') return undefined
-          if (hostname === 'chaosarmenu.com' || hostname.endsWith('.chaosarmenu.com')) return '.chaosarmenu.com'
-          return undefined
-        })(),
-      },
-    }
-  )
+  // ÖNEMLİ: createBrowserClient için custom cookies objesi geçmiyoruz.
+  // GoTrueClient, dahili olarak document.cookie üzerinden çalışıyor.
+  supabaseBrowserClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      name: 'sb-auth-token',
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      domain: (() => {
+        if (typeof window === 'undefined') return undefined
+        const hostname = window.location.hostname
+        if (hostname === 'localhost' || hostname === '127.0.0.1') return undefined
+        if (hostname === 'chaosarmenu.com' || hostname.endsWith('.chaosarmenu.com')) return '.chaosarmenu.com'
+        return undefined
+      })(),
+    },
+  })
 
   return supabaseBrowserClient
 }

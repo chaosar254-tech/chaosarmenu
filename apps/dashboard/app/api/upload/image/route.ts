@@ -155,7 +155,6 @@ export async function POST(request: NextRequest) {
         bucket: BUCKET_MENU_IMAGES,
         path: storagePath,
         error: uploadError.message,
-        errorCode: uploadError.statusCode,
       })
       
       // Handle bucket not found

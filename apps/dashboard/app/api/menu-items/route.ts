@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { restaurant_id, category_id, name, description, price, image_url, image_path, sort_order, is_active, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, recommended_sides, recommended_sides_auto, recommended_sides_source, name_en, name_ar, description_en, description_ar } = body
+    const { restaurant_id, category_id, subcategory_id, name, description, price, image_url, image_path, sort_order, is_active, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, recommended_sides, recommended_sides_auto, recommended_sides_source, name_en, name_ar, description_en, description_ar } = body
 
     // Get branch_id from cookie (server-side source of truth)
     const branchId = await getActiveBranchId()
@@ -149,6 +149,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // If subcategory is provided, validate that it belongs to the same branch and category
+    if (subcategory_id) {
+      const { data: subcategory, error: subcategoryError } = await supabase
+        .from('menu_subcategories')
+        .select('id, branch_id, category_id')
+        .eq('id', subcategory_id)
+        .single()
+
+      if (
+        subcategoryError ||
+        !subcategory ||
+        subcategory.branch_id !== branchId ||
+        subcategory.category_id !== category_id
+      ) {
+        console.error('[Menu Items POST] Subcategory validation failed:', {
+          subcategoryId: subcategory_id,
+          branchId,
+          categoryId: category_id,
+          subcategoryError,
+        })
+        return NextResponse.json(
+          { error: 'Subcategory not found for this branch/category' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Get restaurant for plan limits check
     const { data: restaurant, error: restaurantError } = await supabase
       .from('restaurants')
@@ -205,6 +232,7 @@ export async function POST(request: NextRequest) {
         branch_id: branchId, // Set branch_id from cookie
         restaurant_id,
         category_id,
+        subcategory_id: subcategory_id || null,
         name,
         description: description || null,
         price,
@@ -276,7 +304,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, restaurant_id, category_id, name, description, price, image_url, image_path, sort_order, is_active, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, recommended_sides, recommended_sides_auto, recommended_sides_source, name_en, name_ar, description_en, description_ar } = body
+    const { id, restaurant_id, category_id, subcategory_id, name, description, price, image_url, image_path, sort_order, is_active, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, recommended_sides, recommended_sides_auto, recommended_sides_source, name_en, name_ar, description_en, description_ar } = body
 
     // Get branch_id from cookie (server-side source of truth)
     const branchId = await getActiveBranchId()
@@ -419,6 +447,33 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // If subcategory is provided, validate that it belongs to the same branch and category
+    if (subcategory_id) {
+      const { data: subcategory, error: subcategoryError } = await supabase
+        .from('menu_subcategories')
+        .select('id, branch_id, category_id')
+        .eq('id', subcategory_id)
+        .single()
+
+      if (
+        subcategoryError ||
+        !subcategory ||
+        subcategory.branch_id !== branchId ||
+        subcategory.category_id !== category_id
+      ) {
+        console.error('[Menu Items PUT] Subcategory validation failed:', {
+          subcategoryId: subcategory_id,
+          branchId,
+          categoryId: category_id,
+          subcategoryError,
+        })
+        return NextResponse.json(
+          { error: 'Subcategory not found for this branch/category' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Get restaurant for plan limits check
     const { data: restaurant, error: restaurantError } = await supabase
       .from('restaurants')
@@ -524,6 +579,9 @@ export async function PUT(request: NextRequest) {
     }
     if (recommended_sides_auto !== undefined) {
       updatePayload.recommended_sides_auto = recommended_sides_auto && typeof recommended_sides_auto === 'string' ? recommended_sides_auto.trim() || null : null
+    }
+    if (subcategory_id !== undefined) {
+      updatePayload.subcategory_id = subcategory_id || null
     }
     if (recommended_sides_source !== undefined) {
       updatePayload.recommended_sides_source = recommended_sides_source === 'manual' ? 'manual' : 'auto'

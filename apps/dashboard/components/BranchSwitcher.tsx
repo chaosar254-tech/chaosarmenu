@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useActiveBranch } from '@/contexts/BranchContext'
 
 export default function BranchSwitcher() {
   const { activeBranchId, setActiveBranchId, branches, isLoading } = useActiveBranch()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const selectedBranch = branches.find(b => b.id === activeBranchId)
 
@@ -35,7 +37,11 @@ export default function BranchSwitcher() {
         <span className="truncate max-w-[200px]">
           {selectedBranch ? `📍 ${selectedBranch.name}` : 'Şube Seçiniz'}
         </span>
-        <ChevronDown size={16} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+        {mounted ? (
+          <ChevronDown size={16} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+        ) : (
+          <span className="inline-block w-4 h-4" aria-hidden />
+        )}
       </button>
 
       {dropdownOpen && (

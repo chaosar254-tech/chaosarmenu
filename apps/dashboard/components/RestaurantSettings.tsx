@@ -14,6 +14,7 @@ interface Restaurant {
   name: string
   slug: string
   logo_path?: string | null
+  logo_url?: string | null
   cover_image?: string | null
   template_id?: string | null
   theme_primary?: string | null

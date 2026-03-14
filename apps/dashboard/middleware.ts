@@ -56,29 +56,23 @@ export async function middleware(request: NextRequest) {
 
   const cookieDomain = process.env.NODE_ENV === 'production' ? '.chaosarmenu.com' : undefined
 
+  // getAll/setAll pattern - @supabase/ssr recommended for middleware (Edge runtime)
+  // get/set/remove can cause "cookies.get" undefined in some Edge contexts
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: any) {
-          const opts = { ...options, ...(cookieDomain && { domain: cookieDomain }) }
-          request.cookies.set({ name, value, ...opts })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          response.cookies.set({ name, value, ...opts })
-        },
-        remove(name: string, options: any) {
-          const opts = { ...options, ...(cookieDomain && { domain: cookieDomain }) }
-          request.cookies.set({ name, value: '', ...opts })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          response.cookies.set({ name, value: '', ...opts })
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          const opts = (o: Record<string, unknown> = {}) => ({ ...o, ...(cookieDomain && { domain: cookieDomain }) })
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, opts(options as Record<string, unknown>))
+          )
         },
       },
     }

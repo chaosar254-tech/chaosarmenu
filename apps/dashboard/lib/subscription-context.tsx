@@ -3,6 +3,8 @@
 import { createContext, useContext, ReactNode } from 'react'
 import { hasActiveSubscription, type RestaurantSubscription } from './subscription-utils'
 
+export type { RestaurantSubscription }
+
 interface SubscriptionContextType {
   subscription: RestaurantSubscription | null
   hasActiveSubscription: boolean

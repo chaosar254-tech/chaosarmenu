@@ -3,7 +3,17 @@ import { cookies } from 'next/headers'
 
 const cookieDomain = process.env.NODE_ENV === 'production' ? '.chaosarmenu.com' : undefined
 
-export function createServerSupabaseClient(cookieStore: ReturnType<typeof cookies>) {
+/**
+ * Server-side Supabase client. cookieStore MUST be from await cookies() inside an async function.
+ * Never call cookies() at top level or pass a Promise.
+ */
+export function createServerSupabaseClient(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  if (!cookieStore || typeof cookieStore.get !== 'function') {
+    throw new Error(
+      '[Supabase] createServerSupabaseClient requires cookieStore from await cookies(). ' +
+        'Ensure you call: const cookieStore = await cookies(); createServerSupabaseClient(cookieStore)'
+    )
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 

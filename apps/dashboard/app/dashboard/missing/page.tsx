@@ -57,9 +57,17 @@ async function MissingItemsContent() {
     )
   }
 
+  // Normalize menu_categories: Supabase may return array for relation, MissingItemsClient expects single object
+  const normalizedItems = (items || []).map((item: any) => ({
+    ...item,
+    menu_categories: Array.isArray(item.menu_categories) && item.menu_categories[0]
+      ? item.menu_categories[0]
+      : item.menu_categories,
+  }))
+
   return (
     <MissingItemsClient 
-      items={items || []} 
+      items={normalizedItems} 
       restaurantPlan={restaurant.plan || 'starter'}
     />
   )
