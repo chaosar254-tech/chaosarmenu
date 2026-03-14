@@ -273,7 +273,9 @@ export function ModernTheme({
   };
 
   const handleARClick = (item: Product) => {
-    if (!item.has_ar || !(item.model_glb || item.ar_model_glb || item.model_usdz || item.ar_model_usdz)) return;
+    const glb = (item.model_glb || item.ar_model_glb)?.trim();
+    const usdz = (item.model_usdz || item.ar_model_usdz)?.trim();
+    if (!item.has_ar || (!glb && !usdz)) return;
     setSelectedProduct(item);
     setArOpen(true);
   };
@@ -607,8 +609,8 @@ export function ModernTheme({
         <ARViewer
           open={arOpen}
           onClose={() => { setArOpen(false); setSelectedProduct(null); }}
-          glbSrc={selectedProduct.model_glb || selectedProduct.ar_model_glb || undefined}
-          usdzSrc={selectedProduct.model_usdz || selectedProduct.ar_model_usdz || undefined}
+          glbSrc={(selectedProduct.model_glb || selectedProduct.ar_model_glb)?.trim() || undefined}
+          usdzSrc={(selectedProduct.model_usdz || selectedProduct.ar_model_usdz)?.trim() || undefined}
           posterSrc={getProductImageUrl(selectedProduct.image_url, selectedProduct.image_path) || undefined}
         />
       )}
@@ -701,8 +703,8 @@ export function ModernTheme({
               <div className="flex-1 overflow-y-auto">
                 {/* ── Üst alan: GLB varsa 3D viewer, yoksa image ── */}
                 {(() => {
-                  const glbPath = selectedProductForModal.model_glb || selectedProductForModal.ar_model_glb;
-                  const usdzPath = selectedProductForModal.model_usdz || selectedProductForModal.ar_model_usdz;
+                  const glbPath = (selectedProductForModal.model_glb || selectedProductForModal.ar_model_glb)?.trim() || null;
+                  const usdzPath = (selectedProductForModal.model_usdz || selectedProductForModal.ar_model_usdz)?.trim() || null;
                   const glbUrl = glbPath ? getStorageUrl(glbPath, 'model') : null;
                   const usdzUrl = usdzPath ? getStorageUrl(usdzPath, 'model') : null;
                   const posterUrl = getProductImageUrl(selectedProductForModal.image_url, selectedProductForModal.image_path) || undefined;
@@ -746,8 +748,8 @@ export function ModernTheme({
                 })()}
 
                 <div className="p-6 space-y-4">
-                  {/* Masada Gör hint — sadece 1 kez, has_ar ürünlerde */}
-                  {selectedProductForModal.has_ar && (
+                  {/* Masada Gör hint — sadece gerçek model dosyası olan ürünlerde */}
+                  {selectedProductForModal.has_ar && !!((selectedProductForModal.model_glb || selectedProductForModal.ar_model_glb || selectedProductForModal.model_usdz || selectedProductForModal.ar_model_usdz)?.trim()) && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
                       className="flex flex-col items-center gap-0.5 pb-1"
                     >
@@ -802,7 +804,7 @@ export function ModernTheme({
                     );
                   })()}
 
-                  {selectedProductForModal.has_ar && (() => {
+                  {selectedProductForModal.has_ar && !!((selectedProductForModal.model_glb || selectedProductForModal.ar_model_glb || selectedProductForModal.model_usdz || selectedProductForModal.ar_model_usdz)?.trim()) && (() => {
                     const usdzUrl = getUSDZUrl(selectedProductForModal);
                     const isIOS = typeof window !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
                     const btnStyle = { background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}DD 100%)` };
