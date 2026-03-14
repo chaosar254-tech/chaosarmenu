@@ -143,16 +143,27 @@ export function ModernTheme({
   const [arOpen, setArOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
-  // Alt kategori filtresi: { [categoryId]: subId }
   const [subFilters, setSubFilters] = useState<Record<string, 'all' | string>>({});
+  // ✅ model-viewer script yüklendi mi?
+  const [modelViewerReady, setModelViewerReady] = useState(false);
 
   const categoryRefs = useRef<{ [key: string]: HTMLElement | null }>({});
-  // Alt kategori section ref'leri: subSectionRefs[categoryId][subId]
   const subSectionRefs = useRef<{ [catId: string]: { [subId: string]: HTMLElement | null } }>({});
   const langDropdownRef = useRef<HTMLDivElement>(null);
 
   const supportedList = LANGUAGE_OPTIONS.filter((o) => supportedLanguages.includes(o.code));
   const supportedListKey = supportedLanguages.join(',');
+
+  // ✅ model-viewer CDN script loader
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (customElements.get('model-viewer')) { setModelViewerReady(true); return; }
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js';
+    script.onload = () => setModelViewerReady(true);
+    document.head.appendChild(script);
+  }, []);
 
   useEffect(() => {
     const list = LANGUAGE_OPTIONS.filter((o) => supportedLanguages.includes(o.code));
@@ -231,7 +242,6 @@ export function ModernTheme({
     return () => { window.removeEventListener("scroll", onScroll); if (rafId != null) cancelAnimationFrame(rafId); };
   }, [categories]);
 
-  // Search filter
   const filteredProducts = products.filter((p) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -240,27 +250,20 @@ export function ModernTheme({
     return name.toLowerCase().includes(query) || (desc?.toLowerCase().includes(query) ?? false);
   });
 
-  // Group by category
   const productsByCategory = useMemo(() => categories.reduce((acc: Record<string, Product[]>, cat) => {
     acc[cat.id] = filteredProducts.filter((p) => p.category_id === cat.id);
     return acc;
   }, {}), [categories, filteredProducts]);
 
-  // Hiyerarşik kategoriler
-  const hierarchicalCategories = useMemo(() => {
-    const result = categories.map((cat) => ({
-      id: cat.id,
-      name: getCategoryName(cat),
-      subCategories: subcategories
-        .filter((sub) => sub.category_id === cat.id && sub.is_active)
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map((sub) => ({ id: sub.id, name: sub.name })),
-    }));
-    console.log('[DEBUG] hierarchicalCategories:', result.map(c => ({ name: c.name, subs: c.subCategories.length })));
-    console.log('[DEBUG] subcategories prop:', subcategories);
-    return result;
+  const hierarchicalCategories = useMemo(() => categories.map((cat) => ({
+    id: cat.id,
+    name: getCategoryName(cat),
+    subCategories: subcategories
+      .filter((sub) => sub.category_id === cat.id && sub.is_active)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((sub) => ({ id: sub.id, name: sub.name })),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categories, subcategories, locale]);
+  })), [categories, subcategories, locale]);
 
   const getUSDZUrl = (item: Product): string | null => {
     const src = item.model_usdz || item.ar_model_usdz;
@@ -275,24 +278,19 @@ export function ModernTheme({
     setArOpen(true);
   };
 
-  // Kategoriye scroll (sticky bar tıklaması)
   const handleCategoryClick = (categoryId: string) => {
     setActiveCategoryId(categoryId);
     const el = categoryRefs.current[categoryId];
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Alt kategori değişimi — filtrele + scroll
   const handleSubChange = (categoryId: string, subId: 'all' | string) => {
     setSubFilters((prev) => ({ ...prev, [categoryId]: subId }));
-    // Kısa gecikmeyle scroll (DOM güncellenmesini bekle)
     setTimeout(() => {
       if (subId === 'all') {
-        // "Tümü" → kategorinin başına scroll
         const el = categoryRefs.current[categoryId];
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
-        // Alt kategori section'ına scroll
         const el = subSectionRefs.current[categoryId]?.[subId];
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -339,8 +337,6 @@ export function ModernTheme({
           className="w-full h-full object-cover"
           onError={(e) => { const t = e.target as HTMLImageElement; if (!t.src.includes('unsplash.com')) t.src = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=80'; }}
         />
-
-        {/* Action buttons */}
         <div className={`absolute top-4 ${locale === 'ar' ? 'left-4' : 'right-4'} z-20 flex items-center gap-2`}>
           {[
             { icon: <Info className="w-5 h-5" />, onClick: () => setIsInfoPanelOpen(true), label: 'Info' },
@@ -353,8 +349,6 @@ export function ModernTheme({
               {btn.icon}
             </button>
           ))}
-
-          {/* Language */}
           <div className="relative" ref={langDropdownRef}>
             <button type="button" onClick={() => setLangDropdownOpen((o) => !o)} className="p-3 backdrop-blur-sm rounded-full shadow-md transition-colors" style={{ backgroundColor: `${cardColor}E6`, color: textColor }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = cardColor; }}
@@ -382,8 +376,6 @@ export function ModernTheme({
             </AnimatePresence>
           </div>
         </div>
-
-        {/* Logo */}
         {(() => {
           const logoUrl = getStorageUrl(restaurant?.logo_path || restaurant?.logo_url, 'menu_logos');
           return logoUrl ? (
@@ -396,7 +388,6 @@ export function ModernTheme({
         })()}
       </div>
 
-      {/* Sticky Hiyerarşik Menü — navigasyon + alt kategori filtresi */}
       <StickyHierarchicalMenu
         categories={hierarchicalCategories}
         activeCategoryId={activeCategoryId}
@@ -439,17 +430,14 @@ export function ModernTheme({
               </div>
             )}
 
-            {/* Tüm kategoriler — scroll spy ile aktif olan öne çıkar */}
             {!searchQuery && categories.map((category) => {
               const categoryProducts = productsByCategory[category.id] || [];
               const activeSub = subFilters[category.id] || 'all';
               const catSubs = subcategories.filter(s => s.category_id === category.id && s.is_active)
                 .sort((a, b) => a.sort_order - b.sort_order);
 
-              // Tüm ürünler (filtre yok — sub'lar section olarak render edilir)
               if (categoryProducts.length === 0) return null;
 
-              // subSectionRefs için kategori objesi yoksa oluştur
               if (!subSectionRefs.current[category.id]) {
                 subSectionRefs.current[category.id] = {};
               }
@@ -477,62 +465,36 @@ export function ModernTheme({
                   </div>
 
                   {catSubs.length > 0 ? (
-                    // Alt kategorili — sub'a göre section'lar
                     catSubs.map((sub) => {
                       const subProducts = categoryProducts.filter(p => p.subcategory_id === sub.id);
-                      // Filtre aktifken sadece seçili sub'u göster
                       if (activeSub !== 'all' && activeSub !== sub.id) return null;
                       if (subProducts.length === 0) return null;
                       return (
                         <div
                           key={sub.id}
-                          ref={(el: HTMLDivElement | null) => {
-                            subSectionRefs.current[category.id][sub.id] = el;
-                          }}
+                          ref={(el: HTMLDivElement | null) => { subSectionRefs.current[category.id][sub.id] = el; }}
                           className="mb-8"
                           style={{ scrollMarginTop: "7rem" }}
                         >
-                          <h3 className={`text-lg font-semibold mb-4 ${textAlign}`}
-                            style={{ color: primaryColor, opacity: 0.85 }}>
+                          <h3 className={`text-lg font-semibold mb-4 ${textAlign}`} style={{ color: primaryColor, opacity: 0.85 }}>
                             {sub.name}
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {subProducts.map((product) => {
                               const menuItem: MenuItem = {
-                                id: product.id,
-                                name: getProductName(product),
-                                price: product.price,
-                                effectivePrice: product.effectivePrice,
-                                description: getProductDescription(product),
-                                image_path: product.image_path,
-                                image_url: product.image_url,
-                                has_ar: product.has_ar,
-                                model_glb: product.model_glb,
-                                model_usdz: product.model_usdz,
-                                ar_model_glb: product.ar_model_glb,
-                                ar_model_usdz: product.ar_model_usdz,
-                                allergens: product.allergens,
-                                is_available: product.is_available,
-                                category_id: product.category_id,
-                                is_active: product.is_active,
-                                sort_order: product.sort_order,
+                                id: product.id, name: getProductName(product), price: product.price,
+                                effectivePrice: product.effectivePrice, description: getProductDescription(product),
+                                image_path: product.image_path, image_url: product.image_url, has_ar: product.has_ar,
+                                model_glb: product.model_glb, model_usdz: product.model_usdz,
+                                ar_model_glb: product.ar_model_glb, ar_model_usdz: product.ar_model_usdz,
+                                allergens: product.allergens, is_available: product.is_available,
+                                category_id: product.category_id, is_active: product.is_active, sort_order: product.sort_order,
                               };
                               return (
-                                <MenuItemCard
-                                  key={product.id}
-                                  item={menuItem}
-                                  onItemClick={(item) => {
-                                    const full = products.find(p => p.id === item.id);
-                                    if (full) setSelectedProductForModal(full);
-                                  }}
-                                  onARClick={(item) => {
-                                    const p: Product = { ...product, name: item.name, description: item.description };
-                                    handleARClick(p);
-                                  }}
-                                  locale={locale}
-                                  primaryColor={primaryColor}
-                                  cardColor={cardColor}
-                                  textColor={textColor}
+                                <MenuItemCard key={product.id} item={menuItem}
+                                  onItemClick={(item) => { const full = products.find(p => p.id === item.id); if (full) setSelectedProductForModal(full); }}
+                                  onARClick={() => { handleARClick(product); }}
+                                  locale={locale} primaryColor={primaryColor} cardColor={cardColor} textColor={textColor}
                                 />
                               );
                             })}
@@ -541,44 +503,22 @@ export function ModernTheme({
                       );
                     })
                   ) : (
-                    // Alt kategorisiz — düz grid
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {categoryProducts.map((product) => {
                         const menuItem: MenuItem = {
-                          id: product.id,
-                          name: getProductName(product),
-                          price: product.price,
-                          effectivePrice: product.effectivePrice,
-                          description: getProductDescription(product),
-                          image_path: product.image_path,
-                          image_url: product.image_url,
-                          has_ar: product.has_ar,
-                          model_glb: product.model_glb,
-                          model_usdz: product.model_usdz,
-                          ar_model_glb: product.ar_model_glb,
-                          ar_model_usdz: product.ar_model_usdz,
-                          allergens: product.allergens,
-                          is_available: product.is_available,
-                          category_id: product.category_id,
-                          is_active: product.is_active,
-                          sort_order: product.sort_order,
+                          id: product.id, name: getProductName(product), price: product.price,
+                          effectivePrice: product.effectivePrice, description: getProductDescription(product),
+                          image_path: product.image_path, image_url: product.image_url, has_ar: product.has_ar,
+                          model_glb: product.model_glb, model_usdz: product.model_usdz,
+                          ar_model_glb: product.ar_model_glb, ar_model_usdz: product.ar_model_usdz,
+                          allergens: product.allergens, is_available: product.is_available,
+                          category_id: product.category_id, is_active: product.is_active, sort_order: product.sort_order,
                         };
                         return (
-                          <MenuItemCard
-                            key={product.id}
-                            item={menuItem}
-                            onItemClick={(item) => {
-                              const full = products.find(p => p.id === item.id);
-                              if (full) setSelectedProductForModal(full);
-                            }}
-                            onARClick={(item) => {
-                              const p: Product = { ...product, name: item.name, description: item.description };
-                              handleARClick(p);
-                            }}
-                            locale={locale}
-                            primaryColor={primaryColor}
-                            cardColor={cardColor}
-                            textColor={textColor}
+                          <MenuItemCard key={product.id} item={menuItem}
+                            onItemClick={(item) => { const full = products.find(p => p.id === item.id); if (full) setSelectedProductForModal(full); }}
+                            onARClick={() => { handleARClick(product); }}
+                            locale={locale} primaryColor={primaryColor} cardColor={cardColor} textColor={textColor}
                           />
                         );
                       })}
@@ -588,42 +528,23 @@ export function ModernTheme({
               );
             })}
 
-            {/* Arama sonuçları */}
             {searchQuery && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProducts.map((product) => {
                   const menuItem: MenuItem = {
-                    id: product.id,
-                    name: getProductName(product),
-                    price: product.price,
-                    effectivePrice: product.effectivePrice,
-                    description: getProductDescription(product),
-                    image_path: product.image_path,
-                    image_url: product.image_url,
-                    has_ar: product.has_ar,
-                    model_glb: product.model_glb,
-                    model_usdz: product.model_usdz,
-                    ar_model_glb: product.ar_model_glb,
-                    ar_model_usdz: product.ar_model_usdz,
-                    allergens: product.allergens,
-                    is_available: product.is_available,
-                    category_id: product.category_id,
-                    is_active: product.is_active,
-                    sort_order: product.sort_order,
+                    id: product.id, name: getProductName(product), price: product.price,
+                    effectivePrice: product.effectivePrice, description: getProductDescription(product),
+                    image_path: product.image_path, image_url: product.image_url, has_ar: product.has_ar,
+                    model_glb: product.model_glb, model_usdz: product.model_usdz,
+                    ar_model_glb: product.ar_model_glb, ar_model_usdz: product.ar_model_usdz,
+                    allergens: product.allergens, is_available: product.is_available,
+                    category_id: product.category_id, is_active: product.is_active, sort_order: product.sort_order,
                   };
                   return (
-                    <MenuItemCard
-                      key={product.id}
-                      item={menuItem}
-                      onItemClick={(item) => {
-                        const full = products.find(p => p.id === item.id);
-                        if (full) setSelectedProductForModal(full);
-                      }}
-                      onARClick={(item) => { handleARClick(product); }}
-                      locale={locale}
-                      primaryColor={primaryColor}
-                      cardColor={cardColor}
-                      textColor={textColor}
+                    <MenuItemCard key={product.id} item={menuItem}
+                      onItemClick={(item) => { const full = products.find(p => p.id === item.id); if (full) setSelectedProductForModal(full); }}
+                      onARClick={() => { handleARClick(product); }}
+                      locale={locale} primaryColor={primaryColor} cardColor={cardColor} textColor={textColor}
                     />
                   );
                 })}
@@ -638,7 +559,6 @@ export function ModernTheme({
               </div>
             )}
 
-            {/* Footer */}
             <div className="mt-16 pt-8 pb-12 space-y-4">
               {restaurant?.include_vat && <p className="text-sm" style={{ color: textColor, opacity: 0.8 }}>{locale === 'tr' ? 'Tüm fiyatlarımıza KDV dahildir.' : locale === 'ar' ? 'جميع الأسعار تشمل ضريبة القيمة المضافة.' : 'All prices include VAT.'}</p>}
               {restaurant?.has_service_fee && restaurant?.service_fee_amount && (
@@ -667,8 +587,7 @@ export function ModernTheme({
             <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -100, opacity: 0 }} className="fixed top-0 left-0 right-0 z-50 p-4 shadow-lg" style={{ backgroundColor: cardColor }}>
               <div className="max-w-2xl mx-auto flex items-center gap-3">
                 <Search className="w-5 h-5" style={{ color: textColor, opacity: 0.5 }} />
-                <input
-                  type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={locale === 'tr' ? 'Ürün ara...' : locale === 'ar' ? 'ابحث عن المنتجات...' : 'Search products...'}
                   dir={textDirection} className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none ${textAlign}`} autoFocus
                   style={{ borderColor: `${textColor}33`, backgroundColor: bgColor, color: textColor }}
@@ -676,9 +595,7 @@ export function ModernTheme({
                   onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
                   onKeyDown={(e) => { if (e.key === 'Escape') setIsSearchOpen(false); }}
                 />
-                <button onClick={() => setIsSearchOpen(false)} className="p-2 rounded-lg" style={{ color: textColor }}>
-                  <X className="w-5 h-5" />
-                </button>
+                <button onClick={() => setIsSearchOpen(false)} className="p-2 rounded-lg" style={{ color: textColor }}><X className="w-5 h-5" /></button>
               </div>
             </motion.div>
           </>
@@ -731,7 +648,6 @@ export function ModernTheme({
                     )}
                   </div>
                 )}
-
                 <div className="flex items-center justify-center gap-4">
                   {(restaurant?.instagram_url || branchSocial?.instagram_url) && (
                     <a href={restaurant?.instagram_url || branchSocial?.instagram_url || '#'} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full hover:scale-110 transition-all" style={{ backgroundColor: '#E4405F', color: '#fff' }}><Instagram className="w-5 h-5" /></a>
@@ -750,7 +666,6 @@ export function ModernTheme({
                     <a href={restaurant?.website_url || branchSocial?.website_url || '#'} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full hover:scale-110 transition-all" style={{ backgroundColor: primaryColor, color: '#fff' }}><Link2 className="w-5 h-5" /></a>
                   )}
                 </div>
-
                 {(restaurant?.address || restaurant?.phone_number || branch?.address || branch?.phone) && (
                   <div>
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: primaryColor }}><MapPin className="w-5 h-5" />{locale === 'tr' ? 'İletişim Bilgileri' : locale === 'ar' ? 'معلومات الاتصال' : 'Contact Information'}</h3>
@@ -760,7 +675,6 @@ export function ModernTheme({
                     </div>
                   </div>
                 )}
-
                 <div className="pt-6 border-t border-gray-200 space-y-3">
                   {restaurant?.include_vat && <p className="text-sm text-gray-600">{locale === 'tr' ? 'Fiyatlara KDV Dahildir' : 'Prices include VAT'}</p>}
                   {restaurant?.has_service_fee && restaurant?.service_fee_amount && <p className="text-sm text-gray-600">{locale === 'tr' ? `Servis Ücreti: %${Number(restaurant.service_fee_amount).toFixed(0)}` : `Service Charge: %${Number(restaurant.service_fee_amount).toFixed(0)}`}</p>}
@@ -772,7 +686,7 @@ export function ModernTheme({
         )}
       </AnimatePresence>
 
-      {/* Product Modal */}
+      {/* ✅ Product Modal — GLB varsa inline 3D viewer */}
       <AnimatePresence>
         {selectedProductForModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedProductForModal(null)}
@@ -783,16 +697,70 @@ export function ModernTheme({
               className="w-[92%] max-w-[400px] max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl flex flex-col" style={{ backgroundColor: cardColor }} dir={textDirection}
             >
               <button onClick={() => setSelectedProductForModal(null)} className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-black/10" style={{ color: textColor }}><X className="w-6 h-6" /></button>
+
               <div className="flex-1 overflow-y-auto">
-                <div className="relative w-full h-56 bg-gray-100">
-                  {selectedProductForModal.image_url || selectedProductForModal.image_path ? (
-                    <img src={getProductImageUrl(selectedProductForModal.image_url, selectedProductForModal.image_path) || ''} alt={getProductName(selectedProductForModal)} className="w-full h-full object-cover rounded-t-2xl" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: bgColor }}><Box className="w-16 h-16" style={{ color: textColor, opacity: 0.3 }} /></div>
-                  )}
-                  <div className="absolute inset-0 pointer-events-none" style={{ border: `3px solid ${primaryColor}`, borderRadius: '1rem' }} />
-                </div>
+                {/* ── Üst alan: GLB varsa 3D viewer, yoksa image ── */}
+                {(() => {
+                  const glbPath = selectedProductForModal.model_glb || selectedProductForModal.ar_model_glb;
+                  const usdzPath = selectedProductForModal.model_usdz || selectedProductForModal.ar_model_usdz;
+                  const glbUrl = glbPath ? getStorageUrl(glbPath, 'model') : null;
+                  const usdzUrl = usdzPath ? getStorageUrl(usdzPath, 'model') : null;
+                  const posterUrl = getProductImageUrl(selectedProductForModal.image_url, selectedProductForModal.image_path) || undefined;
+
+                  if (glbUrl && modelViewerReady) {
+                    return (
+                      <div className="relative w-full h-72">
+                        <model-viewer
+                          src={glbUrl}
+                          ios-src={usdzUrl || undefined}
+                          poster={posterUrl}
+                          alt={getProductName(selectedProductForModal)}
+                          camera-controls
+                          auto-rotate
+                          shadow-intensity="1"
+                          ar
+                          ar-modes="webxr scene-viewer quick-look"
+                          loading="eager"
+                          style={{ width: '100%', height: '100%', borderRadius: '1rem 1rem 0 0', backgroundColor: `${bgColor}33` }}
+                        />
+                        <div className="absolute top-3 left-3 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
+                          style={{ backgroundColor: primaryColor, color: '#fff' }}>
+                          <Box className="w-3 h-3" /> 3D
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="relative w-full h-56 bg-gray-100">
+                      {posterUrl ? (
+                        <img src={posterUrl} alt={getProductName(selectedProductForModal)} className="w-full h-full object-cover rounded-t-2xl" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: bgColor }}>
+                          <Box className="w-16 h-16" style={{ color: textColor, opacity: 0.3 }} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 pointer-events-none" style={{ border: `3px solid ${primaryColor}`, borderRadius: '1rem' }} />
+                    </div>
+                  );
+                })()}
+
                 <div className="p-6 space-y-4">
+                  {/* Masada Gör hint — sadece 1 kez, has_ar ürünlerde */}
+                  {selectedProductForModal.has_ar && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+                      className="flex flex-col items-center gap-0.5 pb-1"
+                    >
+                      <span className="text-xs font-medium tracking-widest uppercase" style={{ color: primaryColor, opacity: 0.65 }}>
+                        Masada Gör
+                      </span>
+                      <motion.div animate={{ y: [0, 4, 0] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}>
+                        <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+                          <path d="M2 2L8 8L14 2" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.65"/>
+                        </svg>
+                      </motion.div>
+                    </motion.div>
+                  )}
                   <h2 className="text-3xl font-serif font-bold" style={{ color: primaryColor }}>{getProductName(selectedProductForModal)}</h2>
                   <span className="text-2xl font-bold" style={{ color: textColor }}>{selectedProductForModal.effectivePrice.toFixed(2)} ₺</span>
                   {getProductDescription(selectedProductForModal) && <p className="text-base leading-relaxed" style={{ color: textColor, opacity: 0.8 }}>{getProductDescription(selectedProductForModal)}</p>}
@@ -822,7 +790,9 @@ export function ModernTheme({
                         <div className="flex gap-3 overflow-x-auto pb-2">
                           {recs.map((rp) => (
                             <div key={rp.id} onClick={() => setSelectedProductForModal(rp)} className="flex-shrink-0 w-32 cursor-pointer group">
-                              {rp.image_url || rp.image_path ? <img src={getProductImageUrl(rp.image_url, rp.image_path) || ''} alt={getProductName(rp)} className="w-full h-24 object-cover rounded-lg mb-2 group-hover:opacity-80 transition-opacity" /> : <div className="w-full h-24 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: bgColor }}><Box className="w-8 h-8" style={{ color: textColor, opacity: 0.3 }} /></div>}
+                              {rp.image_url || rp.image_path
+                                ? <img src={getProductImageUrl(rp.image_url, rp.image_path) || ''} alt={getProductName(rp)} className="w-full h-24 object-cover rounded-lg mb-2 group-hover:opacity-80 transition-opacity" />
+                                : <div className="w-full h-24 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: bgColor }}><Box className="w-8 h-8" style={{ color: textColor, opacity: 0.3 }} /></div>}
                               <p className="text-sm font-medium truncate" style={{ color: textColor }}>{getProductName(rp)}</p>
                               <p className="text-xs" style={{ color: textColor, opacity: 0.7 }}>{rp.effectivePrice.toFixed(2)} ₺</p>
                             </div>
@@ -840,9 +810,23 @@ export function ModernTheme({
                     const label = locale === 'tr' ? 'Masada Gör' : locale === 'ar' ? 'عرض على الطاولة' : 'View on Table';
                     if (isIOS && usdzUrl) {
                       const poster = getProductImageUrl(selectedProductForModal.image_url, selectedProductForModal.image_path);
-                      return <button type="button" onClick={() => { setSelectedProductForModal(null); openARWithBlob(usdzUrl, poster || undefined); }} className={btnClass} style={btnStyle}><Box className="w-5 h-5" /><span>{label}</span></button>;
+                      return (
+                        <div>
+                          <button type="button" onClick={() => { setSelectedProductForModal(null); openARWithBlob(usdzUrl, poster || undefined); }} className={btnClass} style={btnStyle}><Box className="w-5 h-5" /><span>{label}</span></button>
+                          <p className="mt-2 text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>
+                            {locale === 'tr' ? ' Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : '📱 Tap the button and point your camera at the table'}
+                          </p>
+                        </div>
+                      );
                     }
-                    return <button onClick={() => { handleARClick(selectedProductForModal); setSelectedProductForModal(null); }} className={btnClass} style={btnStyle}><Box className="w-5 h-5" /><span>{label}</span></button>;
+                    return (
+                      <div>
+                        <button onClick={() => { handleARClick(selectedProductForModal); setSelectedProductForModal(null); }} className={btnClass} style={btnStyle}><Box className="w-5 h-5" /><span>{label}</span></button>
+                        <p className="mt-2 text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>
+                          {locale === 'tr' ? ' Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : '📱 Tap the button and point your camera at the table'}
+                        </p>
+                      </div>
+                    );
                   })()}
                 </div>
               </div>
