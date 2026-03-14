@@ -128,7 +128,7 @@ export function MenuItemCard({
                 onClick={async (e) => {
                   e.stopPropagation();
                   try {
-                    if (navigator.share) { await navigat.share({ title: item.name, text: item.description || item.name, url: window.location.href }); }
+                    if (navigator.share) { await navigator.share({ title: item.name, text: item.description || item.name, url: window.location.href }); }
                     else { await navigator.clipboard.writeText(window.location.href); alert(locale === 'tr' ? 'Link kopyalandı!' : 'Copied!'); }
                   } catch {}
                 }}
