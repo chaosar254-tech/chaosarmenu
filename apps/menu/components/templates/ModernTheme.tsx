@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search, Globe, Instagram, Link2, Info, MapPin, Phone, Star, Box, Monitor, Check } from "lucide-react";
 import { Sidebar } from "./modern/Sidebar";
@@ -120,6 +120,23 @@ interface ModernThemeProps {
   initialLocale?: 'tr' | 'en' | 'ar';
   supportedLanguages?: ('tr' | 'en' | 'ar')[];
   subcategories?: Subcategory[];
+}
+
+// ✅ model-viewer hatalarını yakalar, sayfayı çökertmez
+class ModelViewerErrorBoundary extends React.Component<
+  { fallback: React.ReactNode; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(e: any) { console.warn('[ModelViewer] caught error:', e); }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
 }
 
 export function ModernTheme({
@@ -272,12 +289,22 @@ export function ModernTheme({
     return `${window.location.origin}${src.startsWith('/') ? '' : '/'}${src}`;
   };
 
+  const [arLoading, setArLoading] = useState(false);
+
   const handleARClick = (item: Product) => {
-    const glb = (item.model_glb || item.ar_model_glb)?.trim();
-    const usdz = (item.model_usdz || item.ar_model_usdz)?.trim();
-    if (!item.has_ar || (!glb && !usdz)) return;
-    setSelectedProduct(item);
-    setArOpen(true);
+    try {
+      const glb = (item.model_glb || item.ar_model_glb)?.trim();
+      const usdz = (item.model_usdz || item.ar_model_usdz)?.trim();
+      if (!item.has_ar || (!glb && !usdz)) return;
+      setArLoading(true);
+      setSelectedProduct(item);
+      setArOpen(true);
+      // AR açılınca loading'i kapat
+      setTimeout(() => setArLoading(false), 3000);
+    } catch (e) {
+      console.error('[AR] handleARClick error:', e);
+      setArLoading(false);
+    }
   };
 
   const handleCategoryClick = (categoryId: string) => {
@@ -710,26 +737,33 @@ export function ModernTheme({
                   const posterUrl = getProductImageUrl(selectedProductForModal.image_url, selectedProductForModal.image_path) || undefined;
 
                   if (glbUrl && modelViewerReady) {
-                    return (
-                      <div className="relative w-full h-72">
-                        <model-viewer
-                          src={glbUrl}
-                          ios-src={usdzUrl || undefined}
-                          poster={posterUrl}
-                          alt={getProductName(selectedProductForModal)}
-                          camera-controls
-                          auto-rotate
-                          shadow-intensity="1"
-                          ar
-                          ar-modes="webxr scene-viewer quick-look"
-                          loading="eager"
-                          style={{ width: '100%', height: '100%', borderRadius: '1rem 1rem 0 0', backgroundColor: `${bgColor}33` }}
-                        />
-                        <div className="absolute top-3 left-3 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
-                          style={{ backgroundColor: primaryColor, color: '#fff' }}>
-                          <Box className="w-3 h-3" /> 3D
-                        </div>
+                    const fallbackImg = (
+                      <div className="relative w-full h-72 bg-gray-100">
+                        {posterUrl ? <img src={posterUrl} alt={getProductName(selectedProductForModal)} className="w-full h-full object-cover rounded-t-2xl" /> : <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: bgColor }}><Box className="w-16 h-16" style={{ color: textColor, opacity: 0.3 }} /></div>}
                       </div>
+                    );
+                    return (
+                      <ModelViewerErrorBoundary fallback={fallbackImg}>
+                        <div className="relative w-full h-72">
+                          <model-viewer
+                            src={glbUrl}
+                            ios-src={usdzUrl || undefined}
+                            poster={posterUrl}
+                            alt={getProductName(selectedProductForModal)}
+                            camera-controls
+                            auto-rotate
+                            shadow-intensity="1"
+                            ar
+                            ar-modes="webxr scene-viewer quick-look"
+                            loading="lazy"
+                            style={{ width: '100%', height: '100%', borderRadius: '1rem 1rem 0 0', backgroundColor: `${bgColor}33` }}
+                          />
+                          <div className="absolute top-3 left-3 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
+                            style={{ backgroundColor: primaryColor, color: '#fff' }}>
+                            <Box className="w-3 h-3" /> 3D
+                          </div>
+                        </div>
+                      </ModelViewerErrorBoundary>
                     );
                   }
 
@@ -808,13 +842,21 @@ export function ModernTheme({
                     const usdzUrl = getUSDZUrl(selectedProductForModal);
                     const isIOS = typeof window !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
                     const btnStyle = { background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}DD 100%)` };
-                    const btnClass = "w-full mt-6 py-4 px-6 rounded-xl font-semibold text-white transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-3";
+                    const btnClass = "w-full mt-6 py-4 px-6 rounded-xl font-semibold text-white transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-70";
                     const label = locale === 'tr' ? 'Masada Gör' : locale === 'ar' ? 'عرض على الطاولة' : 'View on Table';
+                    const loadingLabel = locale === 'tr' ? 'Yükleniyor...' : locale === 'ar' ? 'جارٍ التحميل...' : 'Loading...';
                     if (isIOS && usdzUrl) {
                       const poster = getProductImageUrl(selectedProductForModal.image_url, selectedProductForModal.image_path);
                       return (
                         <div>
-                          <button type="button" onClick={() => { setSelectedProductForModal(null); openARWithBlob(usdzUrl, poster || undefined); }} className={btnClass} style={btnStyle}><Box className="w-5 h-5" /><span>{label}</span></button>
+                          <button type="button" disabled={arLoading}
+                            onClick={() => { setArLoading(true); setSelectedProductForModal(null); setTimeout(() => setArLoading(false), 3000); openARWithBlob(usdzUrl, poster || undefined); }}
+                            className={btnClass} style={btnStyle}>
+                            {arLoading
+                              ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>{loadingLabel}</span></>
+                              : <><Box className="w-5 h-5" /><span>{label}</span></>
+                            }
+                          </button>
                           <p className="mt-2 text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>
                             {locale === 'tr' ? ' Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : '📱 Tap the button and point your camera at the table'}
                           </p>
@@ -823,7 +865,14 @@ export function ModernTheme({
                     }
                     return (
                       <div>
-                        <button onClick={() => { handleARClick(selectedProductForModal); setSelectedProductForModal(null); }} className={btnClass} style={btnStyle}><Box className="w-5 h-5" /><span>{label}</span></button>
+                        <button disabled={arLoading}
+                          onClick={() => { handleARClick(selectedProductForModal); setSelectedProductForModal(null); }}
+                          className={btnClass} style={btnStyle}>
+                          {arLoading
+                            ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>{loadingLabel}</span></>
+                            : <><Box className="w-5 h-5" /><span>{label}</span></>
+                          }
+                        </button>
                         <p className="mt-2 text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>
                           {locale === 'tr' ? ' Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : '📱 Tap the button and point your camera at the table'}
                         </p>
