@@ -175,7 +175,7 @@ export function MenuItemCard({
               if (isIOSDevice && usdzUrl) {
                 return (
                   <motion.button type="button"
-                    onClick={(e) => { e.stopPropagation(); openARWithBlob(usdzUrl, item.image_url || undefined); }}
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); openARWithBlob(usdzUrl, item.image_url || undefined); }}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all font-montserrat"
                     style={{ backgroundColor: cardColor, color: textColor }}
                     whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
@@ -186,7 +186,7 @@ export function MenuItemCard({
               }
               return (
                 <motion.button
-                  onClick={(e) => { e.stopPropagation(); onARClick(item); }}
+                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); onARClick(item); }}
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all font-montserrat"
                   style={{ backgroundColor: cardColor, color: textColor }}
                   whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
