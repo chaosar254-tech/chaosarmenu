@@ -57,16 +57,23 @@ export default function DashboardPage() {
       }
 
       // Check if user is admin
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
         .maybeSingle();
 
+      console.log("🔍 [DASHBOARD] Profile:", profile, "profileError:", profileError?.message);
+
+      // Profile okunamazsa sayfada kal — unauthorized'a gitme
+      if (profileError || profile === undefined) {
+        console.warn("⚠️ [DASHBOARD] Could not read profile, staying on page");
+        return;
+      }
+
       const isAdmin = profile?.is_admin === true;
 
       if (!isAdmin) {
-        // User is not admin, check if they own a restaurant
         const { data: restaurant } = await supabase
           .from('restaurants')
           .select('id')
@@ -74,13 +81,11 @@ export default function DashboardPage() {
           .maybeSingle();
 
         if (restaurant) {
-          // User is a restaurant owner, redirect to restaurant dashboard
-          console.log("⚠️ [DASHBOARD] User is not admin but owns a restaurant, redirecting to restaurant dashboard");
+          console.log("⚠️ [DASHBOARD] Redirecting to restaurant dashboard");
           window.location.href = 'https://dashboard.chaosarmenu.com';
           return;
         } else {
-          // User has no role, redirect to unauthorized page
-          console.warn("⚠️ [DASHBOARD] User is not admin and doesn't own a restaurant, redirecting to unauthorized");
+          console.warn("⚠️ [DASHBOARD] No role, redirecting to unauthorized");
           router.replace("/unauthorized");
           return;
         }
