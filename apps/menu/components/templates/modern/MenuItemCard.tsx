@@ -31,7 +31,7 @@ interface MenuItemCardProps {
   item: MenuItem;
   onItemClick: (item: MenuItem) => void;
   onARClick: (item: MenuItem) => void;
-  locale: 'tr' | 'en' | 'ar';
+  locale: 'tr' | 'en' | 'ar' | 'de' | 'fr';
   primaryColor?: string;
   cardColor?: string;
   textColor?: string;
