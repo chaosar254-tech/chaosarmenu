@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 import { useActiveBranch } from '@/contexts/BranchContext'
 import { BUCKET_MENU_LOGOS } from '@/lib/storage-constants'
 
-type SupportedLangCode = 'tr' | 'en' | 'ar'
+type SupportedLangCode = 'tr' | 'en' | 'ar' | 'de' | 'fr'
 
 interface Restaurant {
   id: string
@@ -123,7 +123,7 @@ export default function RestaurantSettings({ restaurant: initialRestaurant, init
   // Dil ayarları: menüde gösterilecek diller (varsayılan tr, en, ar)
   const defaultLangs: SupportedLangCode[] = ['tr', 'en', 'ar']
   const initialLangs = Array.isArray((restaurant as any).supported_languages)
-    ? (restaurant as any).supported_languages.filter((c: string) => ['tr', 'en', 'ar'].includes(c))
+    ? (restaurant as any).supported_languages.filter((c: string) => ['tr', 'en', 'ar', 'de', 'fr'].includes(c))
     : defaultLangs
   const [supportedLanguages, setSupportedLanguages] = useState<SupportedLangCode[]>(
     initialLangs.length > 0 ? initialLangs : defaultLangs
@@ -1602,8 +1602,8 @@ export default function RestaurantSettings({ restaurant: initialRestaurant, init
             Menü sayfasındaki dil seçicide hangi dillerin görüneceğini belirleyin. Kapalı olan diller menüde listelenmez.
           </p>
           <div className="space-y-3">
-            {(['tr', 'en', 'ar'] as const).map((code) => {
-              const label = code === 'tr' ? 'Türkçe' : code === 'en' ? 'İngilizce' : 'Arapça'
+            {(['tr', 'en', 'ar', 'de', 'fr'] as const).map((code) => {
+              const label = code === 'tr' ? 'Türkçe' : code === 'en' ? 'İngilizce' : code === 'ar' ? 'Arapça' : code === 'de' ? 'Almanca' : 'Fransızca'
               const enabled = supportedLanguages.includes(code)
               return (
                 <div key={code} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">

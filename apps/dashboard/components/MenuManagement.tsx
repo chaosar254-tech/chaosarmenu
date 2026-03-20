@@ -46,8 +46,12 @@ interface MenuItem {
   allergens?: string[] | null // Allergen identifiers
   name_en?: string | null
   name_ar?: string | null
+  name_de?: string | null
+  name_fr?: string | null
   description_en?: string | null
   description_ar?: string | null
+  description_de?: string | null
+  description_fr?: string | null
 }
 
 interface MenuManagementProps {
@@ -113,6 +117,9 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
   // Allergen state
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>([])
   const [activeItemTab, setActiveItemTab] = useState<'genel' | 'icindekiler' | 'alerjenler' | 'upsell' | 'ceviriler' | 'ar'>('genel')
+  const [translating, setTranslating] = useState(false)
+  const [bulkTranslating, setBulkTranslating] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null)
   const [itemSearchQuery, setItemSearchQuery] = useState('')
   const [categorySearchQuery, setCategorySearchQuery] = useState('')
   const [recommendedItemsSearchQuery, setRecommendedItemsSearchQuery] = useState('')
@@ -132,8 +139,12 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
     model_usdz: '',
     name_en: '',
     name_ar: '',
+    name_de: '',
+    name_fr: '',
     description_en: '',
     description_ar: '',
+    description_de: '',
+    description_fr: '',
   })
 
   // Calculate AR usage
@@ -179,7 +190,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       // Load items filtered by branch_id
       const { data: its, error: itemsError } = await supabase
         .from('menu_items')
-        .select('id, name, description, price, image_url, image_path, category_id, subcategory_id, is_active, sort_order, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, name_en, name_ar, description_en, description_ar')
+        .select('id, name, description, price, image_url, image_path, category_id, subcategory_id, is_active, sort_order, has_ar, model_glb, model_usdz, ingredients, recommended_item_ids, allergens, name_en, name_ar, name_de, name_fr, description_en, description_ar, description_de, description_fr')
         .eq('branch_id', activeBranchId)
         .order('sort_order', { ascending: true })
 
@@ -624,8 +635,12 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       allergens: selectedAllergens.length > 0 ? selectedAllergens : [],
       name_en: itemFormData.name_en?.trim() || null,
       name_ar: itemFormData.name_ar?.trim() || null,
+      name_de: itemFormData.name_de?.trim() || null,
+      name_fr: itemFormData.name_fr?.trim() || null,
       description_en: itemFormData.description_en?.trim() || null,
       description_ar: itemFormData.description_ar?.trim() || null,
+      description_de: itemFormData.description_de?.trim() || null,
+      description_fr: itemFormData.description_fr?.trim() || null,
     }
 
     try {
@@ -700,8 +715,12 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
         model_usdz: '',
         name_en: '',
         name_ar: '',
+        name_de: '',
+        name_fr: '',
         description_en: '',
         description_ar: '',
+        description_de: '',
+        description_fr: '',
       })
       loadData()
     } catch (error: any) {
@@ -838,8 +857,12 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       model_usdz: item.model_usdz || '',
       name_en: item.name_en ?? '',
       name_ar: item.name_ar ?? '',
+      name_de: item.name_de ?? '',
+      name_fr: item.name_fr ?? '',
       description_en: item.description_en ?? '',
       description_ar: item.description_ar ?? '',
+      description_de: item.description_de ?? '',
+      description_fr: item.description_fr ?? '',
     })
     // Load subcategories for the item's category so subcategory dropdown is populated
     if (item.category_id) {
@@ -911,6 +934,31 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       description_ar: '',
     })
     setShowItemModal(true)
+  }
+
+  const handleBulkTranslate = async () => {
+    if (items.length === 0) return
+    if (!confirm(`${items.length} ürünü DeepL ile çevirmek istiyor musunuz? Mevcut çeviriler üzerine yazılacak.`)) return
+    if (!activeBranchId) return
+
+    setBulkTranslating(true)
+    setBulkProgress({ done: 0, total: items.length })
+    try {
+      const res = await fetch('/api/translate-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branchId: activeBranchId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Hata')
+      toast.success(`${data.itemsTranslated} ürün, ${data.categoriesTranslated} kategori çevrildi`)
+      loadData()
+    } catch (e: any) {
+      toast.error('Çeviri hatası: ' + e.message)
+    } finally {
+      setBulkTranslating(false)
+      setBulkProgress(null)
+    }
   }
 
   const handleToggleAllergen = (allergenKey: string) => {
@@ -1433,13 +1481,25 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       <div>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold text-gray-900">Menü Ürünleri</h2>
-          <button
-            onClick={handleNewItem}
-            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-            disabled={categories.length === 0}
-          >
-            + Ürün Ekle
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBulkTranslate}
+              disabled={bulkTranslating || items.length === 0}
+              className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1"
+            >
+              <Globe className="h-4 w-4" />
+              {bulkTranslating && bulkProgress
+                ? `Çevriliyor... ${bulkProgress.done}/${bulkProgress.total}`
+                : 'Tümünü Çevir (DeepL)'}
+            </button>
+            <button
+              onClick={handleNewItem}
+              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+              disabled={categories.length === 0}
+            >
+              + Ürün Ekle
+            </button>
+          </div>
         </div>
 
         {/* Search Input */}
@@ -2046,6 +2106,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                   { id: 'icindekiler' as const, label: 'İçindekiler' },
                   { id: 'alerjenler' as const, label: 'Alerjenler' },
                   { id: 'upsell' as const, label: 'Yanında İyi Gider' },
+                  { id: 'ceviriler' as const, label: 'Çeviriler' },
                   { id: 'ar' as const, label: 'AR' },
                 ].map((tab) => (
                   <button
@@ -2423,6 +2484,88 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
                       Maksimum 6 ürün seçebilirsiniz
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Tab: Çeviriler */}
+              {activeItemTab === 'ceviriler' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-sm text-gray-600">
+                      Müşteri menüde dili değiştirdiğinde bu alanlar kullanılır. Boş bırakılırsa Türkçe gösterilir.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={translating || !itemFormData.name}
+                      onClick={async () => {
+                        if (!editingItem?.id) return
+                        setTranslating(true)
+                        try {
+                          const res = await fetch('/api/translate-bulk', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ itemId: editingItem.id }),
+                          })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error || 'Hata')
+                          // Reload item data into form
+                          const { data: updated } = await supabase
+                            .from('menu_items')
+                            .select('name_en, name_ar, name_de, name_fr, description_en, description_ar, description_de, description_fr')
+                            .eq('id', editingItem.id)
+                            .single()
+                          if (updated) {
+                            setItemFormData(prev => ({
+                              ...prev,
+                              name_en: updated.name_en ?? '',
+                              name_ar: updated.name_ar ?? '',
+                              name_de: updated.name_de ?? '',
+                              name_fr: updated.name_fr ?? '',
+                              description_en: updated.description_en ?? '',
+                              description_ar: updated.description_ar ?? '',
+                              description_de: updated.description_de ?? '',
+                              description_fr: updated.description_fr ?? '',
+                            }))
+                          }
+                          toast.success('Çeviri kaydedildi')
+                        } catch (e: any) {
+                          toast.error('Çeviri hatası: ' + e.message)
+                        } finally {
+                          setTranslating(false)
+                        }
+                      }}
+                      className="shrink-0 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {translating ? 'Çevriliyor...' : 'Otomatik Çevir (DeepL)'}
+                    </button>
+                  </div>
+
+                  {[
+                    { label: 'English', nameKey: 'name_en', descKey: 'description_en', namePlaceholder: 'English product name', descPlaceholder: 'English description', dir: 'ltr' },
+                    { label: 'العربية (Arabic)', nameKey: 'name_ar', descKey: 'description_ar', namePlaceholder: 'اسم المنتج بالعربية', descPlaceholder: 'الوصف بالعربية', dir: 'rtl' },
+                    { label: 'Deutsch (German)', nameKey: 'name_de', descKey: 'description_de', namePlaceholder: 'Deutscher Produktname', descPlaceholder: 'Deutsche Beschreibung', dir: 'ltr' },
+                    { label: 'Français (French)', nameKey: 'name_fr', descKey: 'description_fr', namePlaceholder: 'Nom du produit en français', descPlaceholder: 'Description en français', dir: 'ltr' },
+                  ].map(({ label, nameKey, descKey, namePlaceholder, descPlaceholder, dir }) => (
+                    <div key={nameKey} className="p-4 rounded-lg border border-gray-200 bg-gray-50/50">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">{label}</h4>
+                      <div className="space-y-3" dir={dir as any}>
+                        <input
+                          type="text"
+                          value={(itemFormData as any)[nameKey]}
+                          onChange={(e) => setItemFormData(prev => ({ ...prev, [nameKey]: e.target.value }))}
+                          placeholder={namePlaceholder}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        />
+                        <textarea
+                          value={(itemFormData as any)[descKey]}
+                          onChange={(e) => setItemFormData(prev => ({ ...prev, [descKey]: e.target.value }))}
+                          rows={2}
+                          placeholder={descPlaceholder}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

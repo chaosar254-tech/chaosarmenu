@@ -22,8 +22,12 @@ interface MenuItem {
   allergens?: string[] | null
   name_en?: string | null
   name_ar?: string | null
+  name_de?: string | null
+  name_fr?: string | null
   description_en?: string | null
   description_ar?: string | null
+  description_de?: string | null
+  description_fr?: string | null
 }
 
 interface Category {
@@ -81,17 +85,26 @@ export default function ProductEditModal({
   const [modelUsdz, setModelUsdz] = useState(item?.model_usdz || '')
   const [nameEn, setNameEn] = useState(item?.name_en ?? '')
   const [nameAr, setNameAr] = useState(item?.name_ar ?? '')
+  const [nameDe, setNameDe] = useState(item?.name_de ?? '')
+  const [nameFr, setNameFr] = useState(item?.name_fr ?? '')
   const [descriptionEn, setDescriptionEn] = useState(item?.description_en ?? '')
   const [descriptionAr, setDescriptionAr] = useState(item?.description_ar ?? '')
+  const [descriptionDe, setDescriptionDe] = useState(item?.description_de ?? '')
+  const [descriptionFr, setDescriptionFr] = useState(item?.description_fr ?? '')
+  const [translating, setTranslating] = useState(false)
 
   // Sync translation fields when item changes (e.g. opening modal for another product)
   useEffect(() => {
     if (!item) return
     setNameEn(item.name_en ?? '')
     setNameAr(item.name_ar ?? '')
+    setNameDe(item.name_de ?? '')
+    setNameFr(item.name_fr ?? '')
     setDescriptionEn(item.description_en ?? '')
     setDescriptionAr(item.description_ar ?? '')
-  }, [item?.id, item?.name_en, item?.name_ar, item?.description_en, item?.description_ar])
+    setDescriptionDe(item.description_de ?? '')
+    setDescriptionFr(item.description_fr ?? '')
+  }, [item?.id, item?.name_en, item?.name_ar, item?.name_de, item?.name_fr, item?.description_en, item?.description_ar, item?.description_de, item?.description_fr])
 
   if (!isOpen) return null
 
@@ -122,8 +135,12 @@ export default function ProductEditModal({
         allergens: selectedAllergens.length > 0 ? selectedAllergens : [],
         name_en: nameEn.trim() || null,
         name_ar: nameAr.trim() || null,
+        name_de: nameDe.trim() || null,
+        name_fr: nameFr.trim() || null,
         description_en: descriptionEn.trim() || null,
         description_ar: descriptionAr.trim() || null,
+        description_de: descriptionDe.trim() || null,
+        description_fr: descriptionFr.trim() || null,
       })
       onClose()
     } catch (error) {
@@ -418,9 +435,45 @@ export default function ProductEditModal({
           {/* Tab: Çeviriler (Translations) */}
           {activeTab === 'ceviriler' && (
             <div className="space-y-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Müşteri menüde dili değiştirdiğinde bu alanlar kullanılır. Boş bırakılırsa Türkçe (Genel sekmesi) gösterilir.
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Müşteri menüde dili değiştirdiğinde bu alanlar kullanılır. Boş bırakılırsa Türkçe (Genel sekmesi) gösterilir.
+                </p>
+                <button
+                  type="button"
+                  disabled={translating || !name}
+                  onClick={async () => {
+                    if (!name) return
+                    setTranslating(true)
+                    try {
+                      const langs: { code: string; setter: [typeof setNameEn, typeof setDescriptionEn] }[] = [
+                        { code: 'EN-US', setter: [setNameEn, setDescriptionEn] },
+                        { code: 'AR', setter: [setNameAr, setDescriptionAr] },
+                        { code: 'DE', setter: [setNameDe, setDescriptionDe] },
+                        { code: 'FR', setter: [setNameFr, setDescriptionFr] },
+                      ]
+                      await Promise.all(langs.map(async ({ code, setter }) => {
+                        const res = await fetch('/api/translate', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ texts: [name, description || ''], targetLang: code }),
+                        })
+                        if (!res.ok) return
+                        const data = await res.json()
+                        setter[0](data.translations[0] || '')
+                        setter[1](data.translations[1] || '')
+                      }))
+                    } catch (e) {
+                      console.error('Çeviri hatası:', e)
+                    } finally {
+                      setTranslating(false)
+                    }
+                  }}
+                  className="shrink-0 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {translating ? 'Çevriliyor...' : 'Otomatik Çevir (DeepL)'}
+                </button>
+              </div>
               <div className="space-y-6">
                 <div className="p-4 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50/50 dark:bg-zinc-800/50">
                   <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">English</h4>
@@ -478,6 +531,66 @@ export default function ProductEditModal({
                         placeholder="الوصف بالعربية"
                         dir="rtl"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 text-right"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50/50 dark:bg-zinc-800/50">
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Deutsch (German)</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Produktname (DE)
+                      </label>
+                      <input
+                        type="text"
+                        value={nameDe}
+                        onChange={(e) => setNameDe(e.target.value)}
+                        placeholder="Deutscher Produktname"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Beschreibung (DE)
+                      </label>
+                      <textarea
+                        value={descriptionDe}
+                        onChange={(e) => setDescriptionDe(e.target.value)}
+                        rows={3}
+                        placeholder="Deutsche Beschreibung"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50/50 dark:bg-zinc-800/50">
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Français (French)</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Nom du produit (FR)
+                      </label>
+                      <input
+                        type="text"
+                        value={nameFr}
+                        onChange={(e) => setNameFr(e.target.value)}
+                        placeholder="Nom du produit en français"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Description (FR)
+                      </label>
+                      <textarea
+                        value={descriptionFr}
+                        onChange={(e) => setDescriptionFr(e.target.value)}
+                        rows={3}
+                        placeholder="Description en français"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
                       />
                     </div>
                   </div>

@@ -14,6 +14,8 @@ interface Category {
   name: string;
   name_en?: string | null;
   name_ar?: string | null;
+  name_de?: string | null;
+  name_fr?: string | null;
   sort_order: number;
   is_active: boolean;
   image_url?: string | null;
@@ -24,11 +26,15 @@ interface Product {
   name: string;
   name_en?: string | null;
   name_ar?: string | null;
+  name_de?: string | null;
+  name_fr?: string | null;
   price: number;
   effectivePrice: number;
   description: string | null;
   description_en?: string | null;
   description_ar?: string | null;
+  description_de?: string | null;
+  description_fr?: string | null;
   image_path: string | null;
   image_url: string | null;
   has_ar: boolean;
@@ -48,7 +54,7 @@ interface Product {
   is_available?: boolean;
 }
 
-type SupportedLang = 'tr' | 'en' | 'ar';
+type SupportedLang = 'tr' | 'en' | 'ar' | 'de' | 'fr';
 
 interface Restaurant {
   id: string;
@@ -97,7 +103,7 @@ function normalizeSupportedLanguages(raw: unknown): SupportedLang[] {
   const defaultLangs: SupportedLang[] = ['tr', 'en', 'ar'];
   if (raw == null) return defaultLangs;
   if (Array.isArray(raw)) {
-    const valid = raw.filter((c): c is SupportedLang => c === 'tr' || c === 'en' || c === 'ar');
+    const valid = raw.filter((c): c is SupportedLang => c === 'tr' || c === 'en' || c === 'ar' || c === 'de' || c === 'fr');
     return valid.length > 0 ? valid : defaultLangs;
   }
   return defaultLangs;
@@ -152,6 +158,8 @@ function SplashScreen({
             style={{ color: textColor, fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '0.05em' }}>
             {language === 'tr' ? `${splashTableDisplayText}'e Hoşgeldiniz`
               : language === 'ar' ? `مرحباً بك في ${splashTableDisplayText}`
+              : language === 'de' ? `Willkommen bei ${splashTableDisplayText}`
+              : language === 'fr' ? `Bienvenue à ${splashTableDisplayText}`
               : `Welcome to ${splashTableDisplayText}`}
           </p>
         </motion.div>
@@ -163,7 +171,7 @@ function SplashScreen({
         className="text-sm md:text-base font-serif cursor-pointer mb-20"
         style={{ color: textColor, letterSpacing: '0.15em', fontFamily: 'Georgia, "Times New Roman", serif' }}
       >
-        {language === 'tr' ? 'BAŞLAMAK İÇİN TIKLAYIN' : language === 'ar' ? 'انقر للبدء' : 'CLICK TO START'}
+        {language === 'tr' ? 'BAŞLAMAK İÇİN TIKLAYIN' : language === 'ar' ? 'انقر للبدء' : language === 'de' ? 'KLICKEN SIE ZUM STARTEN' : language === 'fr' ? 'CLIQUEZ POUR COMMENCER' : 'CLICK TO START'}
       </motion.p>
 
       {supportedLangs.length > 0 && (
@@ -178,8 +186,8 @@ function SplashScreen({
               <button type="button" onClick={() => setLanguage(lang)}
                 className="flex items-center gap-1.5 transition-all hover:opacity-80"
                 style={{ color: textColor, opacity: language === lang ? 1 : 0.5, fontWeight: language === lang ? '500' : '300' }}>
-                <span className="text-xs">{lang === 'tr' ? '🇹🇷' : lang === 'en' ? '🇬🇧' : '🇸🇦'}</span>
-                <span>{lang === 'tr' ? 'TR' : lang === 'en' ? 'EN' : 'AR'}</span>
+                <span className="text-xs">{lang === 'tr' ? '🇹🇷' : lang === 'en' ? '🇬🇧' : lang === 'ar' ? '🇸🇦' : lang === 'de' ? '🇩🇪' : '🇫🇷'}</span>
+                <span>{lang === 'tr' ? 'TR' : lang === 'en' ? 'EN' : lang === 'ar' ? 'AR' : lang === 'de' ? 'DE' : 'FR'}</span>
               </button>
             </span>
           ))}
@@ -192,7 +200,7 @@ function SplashScreen({
         <div className="space-y-1">
           {includeVat && (
             <p className="text-center" style={{ fontSize: '10px', color: textColor, opacity: 0.8, letterSpacing: '0.05em', fontFamily: 'system-ui, -apple-system, sans-serif', lineHeight: '1.4' }}>
-              {language === 'tr' ? 'Tüm fiyatlarımıza KDV dahildir.' : language === 'ar' ? 'جميع الأسعار تشمل ضريبة القيمة المضافة.' : 'All prices include VAT.'}
+              {language === 'tr' ? 'Tüm fiyatlarımıza KDV dahildir.' : language === 'ar' ? 'جميع الأسعار تشمل ضريبة القيمة المضافة.' : language === 'de' ? 'Alle Preise verstehen sich inklusive MwSt.' : language === 'fr' ? 'Tous les prix incluent la TVA.' : 'All prices include VAT.'}
             </p>
           )}
           <p className="text-center" style={{ fontSize: '10px', color: textColor, opacity: 0.8, letterSpacing: '0.05em', fontFamily: 'system-ui, -apple-system, sans-serif', lineHeight: '1.4' }}>
@@ -332,7 +340,7 @@ export default function MenuPage() {
         }
 
         const { data: categoriesData } = await supabase.from("menu_categories")
-          .select("id, name, name_en, name_ar, sort_order, is_active, image_url")
+          .select("id, name, name_en, name_ar, name_de, name_fr, sort_order, is_active, image_url")
           .eq("restaurant_id", restaurantData.id).eq("is_active", true).order("sort_order", { ascending: true });
         setCategories(categoriesData || []);
 
@@ -345,7 +353,7 @@ export default function MenuPage() {
         console.log('[DEBUG] subcategories:', subcategoriesData);
 
         const { data: productsData } = await supabase.from("menu_items")
-          .select("id, name, name_en, name_ar, price, description, description_en, description_ar, image_path, image_url, has_ar, category_id, subcategory_id, is_active, sort_order, model_glb, model_usdz, ar_model_glb, ar_model_usdz, ingredients, recommended_item_ids, allergens, recommended_sides, recommended_sides_auto, recommended_sides_source")
+          .select("id, name, name_en, name_ar, name_de, name_fr, price, description, description_en, description_ar, description_de, description_fr, image_path, image_url, has_ar, category_id, subcategory_id, is_active, sort_order, model_glb, model_usdz, ar_model_glb, ar_model_usdz, ingredients, recommended_item_ids, allergens, recommended_sides, recommended_sides_auto, recommended_sides_source")
           .eq("restaurant_id", restaurantData.id).eq("is_active", true).order("sort_order", { ascending: true });
 
         const { data: overridesData } = await supabase.from("branch_menu_overrides").select("*").eq("branch_id", branchData.id);
@@ -415,6 +423,8 @@ export default function MenuPage() {
     if (t && t.trim() !== '') return t;
     if (language === 'tr') return 'Alerjen uyarısı: Ürünlerimiz alerjen içerebilir. Alerjiniz varsa lütfen sipariş öncesinde bildiriniz.';
     if (language === 'ar') return 'تحذير الحساسية: قد تحتوي منتجاتنا على مسببات الحساسية. إذا كان لديك حساسية، يرجى إبلاغنا قبل الطلب.';
+    if (language === 'de') return 'Allergenwarnung: Unsere Produkte können Allergene enthalten. Wenn Sie Allergien haben, informieren Sie uns bitte vor der Bestellung.';
+    if (language === 'fr') return "Avertissement allergènes: Nos produits peuvent contenir des allergènes. Si vous avez des allergies, veuillez nous en informer avant de commander.";
     return 'Allergen warning: Our products may contain allergens. If you have allergies, please inform us before ordering.';
   })();
 
@@ -447,7 +457,7 @@ export default function MenuPage() {
             subcategories={subcategories}
             tableNumber={tableNumber}
             loading={false}
-            initialLocale={language}
+            initialLocale={language as 'tr' | 'en' | 'ar' | 'de' | 'fr'}
             supportedLanguages={normalizeSupportedLanguages(restaurant?.supported_languages)}
           />
         </motion.div>

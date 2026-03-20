@@ -64,7 +64,8 @@ export function MenuItemCard({
       transition={{ duration: 0.3, ease: 'easeOut' }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
-      whileTap={isAvailable ? { scale: 0.97 } : {}}oup rounded-xl p-3 transition-all duration-300 relative flex flex-row gap-3 backdrop-blur-md border shadow-sm cursor-pointer ${
+      whileTap={isAvailable ? { scale: 0.97 } : {}}
+      className={`group rounded-xl p-3 transition-all duration-300 relative flex flex-row gap-3 backdrop-blur-md border shadow-sm cursor-pointer ${
         !isAvailable ? 'opacity-60 grayscale' : 'hover:shadow-lg hover:scale-[1.01]'
       }`}
       style={{ backgroundColor: cardColor, borderColor: 'rgba(0,0,0,0.1)' }}

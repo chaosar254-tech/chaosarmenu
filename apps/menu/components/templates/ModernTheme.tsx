@@ -8,7 +8,7 @@ import { MenuItemCard, type MenuItem } from "./modern/MenuItemCard";
 import { SkeletonCard } from "./modern/SkeletonCard";
 import { ARViewer } from "@/app/components/ARViewer";
 import { getProductImageUrl, getImageSrc } from "@/lib/image-utils";
-import { getAllergensByKeys } from "@/lib/allergens";
+import { getAllergensByKeys, getAllergenLabel } from "@/lib/allergens";
 import { openARWithBlob } from "@/lib/ar-utils";
 import { StickyHierarchicalMenu } from "../StickyHierarchicalMenu";
 
@@ -17,6 +17,8 @@ interface Category {
   name: string;
   name_en?: string | null;
   name_ar?: string | null;
+  name_de?: string | null;
+  name_fr?: string | null;
   sort_order: number;
   is_active: boolean;
   image_url?: string | null;
@@ -35,11 +37,15 @@ interface Product {
   name: string;
   name_en?: string | null;
   name_ar?: string | null;
+  name_de?: string | null;
+  name_fr?: string | null;
   price: number;
   effectivePrice: number;
   description: string | null;
   description_en?: string | null;
   description_ar?: string | null;
+  description_de?: string | null;
+  description_fr?: string | null;
   image_path: string | null;
   image_url: string | null;
   has_ar: boolean;
@@ -103,10 +109,12 @@ interface BranchSocial {
   website_url?: string | null;
 }
 
-const LANGUAGE_OPTIONS: { code: 'tr' | 'en' | 'ar'; label: string; labelAr?: string }[] = [
+const LANGUAGE_OPTIONS: { code: 'tr' | 'en' | 'ar' | 'de' | 'fr'; label: string; labelAr?: string }[] = [
   { code: 'tr', label: 'Türkçe', labelAr: 'التركية' },
   { code: 'en', label: 'English', labelAr: 'الإنجليزية' },
   { code: 'ar', label: 'العربية', labelAr: 'العربية' },
+  { code: 'de', label: 'Deutsch', labelAr: 'الألمانية' },
+  { code: 'fr', label: 'Français', labelAr: 'الفرنسية' },
 ];
 
 interface ModernThemeProps {
@@ -117,8 +125,8 @@ interface ModernThemeProps {
   products: Product[];
   tableNumber?: string | null;
   loading?: boolean;
-  initialLocale?: 'tr' | 'en' | 'ar';
-  supportedLanguages?: ('tr' | 'en' | 'ar')[];
+  initialLocale?: 'tr' | 'en' | 'ar' | 'de' | 'fr';
+  supportedLanguages?: ('tr' | 'en' | 'ar' | 'de' | 'fr')[];
   subcategories?: Subcategory[];
 }
 
@@ -147,15 +155,16 @@ export function ModernTheme({
   products,
   tableNumber = null,
   loading = false,
-  initialLocale = 'tr',
-  supportedLanguages = ['tr', 'en', 'ar'],
+  initialLocale = 'tr' as 'tr' | 'en' | 'ar' | 'de' | 'fr',
+  supportedLanguages = ['tr', 'en', 'ar'] as ('tr' | 'en' | 'ar' | 'de' | 'fr')[],
   subcategories = [],
 }: ModernThemeProps) {
-  const [locale, setLocale] = useState<'tr' | 'en' | 'ar'>(initialLocale);
+  const [locale, setLocale] = useState<'tr' | 'en' | 'ar' | 'de' | 'fr'>(initialLocale);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [langBtnPos, setLangBtnPos] = useState<{ top: number; right: number } | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [arOpen, setArOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -204,18 +213,24 @@ export function ModernTheme({
   const getCategoryName = (category: Category): string => {
     if (locale === 'en' && category.name_en) return category.name_en;
     if (locale === 'ar' && category.name_ar) return category.name_ar;
+    if (locale === 'de' && category.name_de) return category.name_de;
+    if (locale === 'fr' && category.name_fr) return category.name_fr;
     return category.name;
   };
 
   const getProductName = (product: Product): string => {
     if (locale === 'en' && product.name_en) return product.name_en;
     if (locale === 'ar' && product.name_ar) return product.name_ar;
+    if (locale === 'de' && product.name_de) return product.name_de;
+    if (locale === 'fr' && product.name_fr) return product.name_fr;
     return product.name;
   };
 
   const getProductDescription = (product: Product): string | null => {
     if (locale === 'en' && product.description_en) return product.description_en;
     if (locale === 'ar' && product.description_ar) return product.description_ar;
+    if (locale === 'de' && product.description_de) return product.description_de;
+    if (locale === 'fr' && product.description_fr) return product.description_fr;
     return product.description;
   };
 
@@ -262,8 +277,8 @@ export function ModernTheme({
   const filteredProducts = products.filter((p) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    const name = locale === 'en' ? (p.name_en || p.name) : locale === 'ar' ? (p.name_ar || p.name) : p.name;
-    const desc = locale === 'en' ? (p.description_en || p.description) : locale === 'ar' ? (p.description_ar || p.description) : p.description;
+    const name = locale === 'en' ? (p.name_en || p.name) : locale === 'ar' ? (p.name_ar || p.name) : locale === 'de' ? (p.name_de || p.name) : locale === 'fr' ? (p.name_fr || p.name) : p.name;
+    const desc = locale === 'en' ? (p.description_en || p.description) : locale === 'ar' ? (p.description_ar || p.description) : locale === 'de' ? (p.description_de || p.description) : locale === 'fr' ? (p.description_fr || p.description) : p.description;
     return name.toLowerCase().includes(query) || (desc?.toLowerCase().includes(query) ?? false);
   });
 
@@ -357,7 +372,7 @@ export function ModernTheme({
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: bgColor, color: textColor }} dir={textDirection}>
+    <div className="min-h-screen relative" style={{ backgroundColor: bgColor, color: textColor }} dir={textDirection}>
       {/* Hero */}
       <div className="relative w-full h-48 overflow-hidden">
         <img
@@ -366,7 +381,7 @@ export function ModernTheme({
           className="w-full h-full object-cover"
           onError={(e) => { const t = e.target as HTMLImageElement; if (!t.src.includes('unsplash.com')) t.src = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=80'; }}
         />
-        <div className={`absolute top-4 ${locale === 'ar' ? 'left-4' : 'right-4'} z-20 flex items-center gap-2`}>
+        <div className={`absolute top-4 ${locale === 'ar' ? 'left-4' : 'right-10'} z-20 flex items-center gap-2`}>
           {[
             { icon: <Info className="w-5 h-5" />, onClick: () => setIsInfoPanelOpen(true), label: 'Info' },
             { icon: <Search className="w-5 h-5" />, onClick: () => setIsSearchOpen(true), label: 'Search' },
@@ -379,30 +394,18 @@ export function ModernTheme({
             </button>
           ))}
           <div className="relative" ref={langDropdownRef}>
-            <button type="button" onClick={() => setLangDropdownOpen((o) => !o)} className="p-3 backdrop-blur-sm rounded-full shadow-md transition-colors" style={{ backgroundColor: `${cardColor}E6`, color: textColor }}
+            <button
+              type="button"
+              onClick={() => setLangDropdownOpen((o) => !o)}
+              className="p-3 backdrop-blur-sm rounded-full shadow-md transition-colors flex items-center justify-center"
+              style={{ backgroundColor: `${cardColor}E6`, color: textColor }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = cardColor; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${cardColor}E6`; }}
             >
-              <Globe className="w-5 h-5" />
+              <span className="text-base leading-none">
+                {locale === 'tr' ? '🇹🇷' : locale === 'en' ? '🇬🇧' : locale === 'ar' ? '🇸🇦' : locale === 'de' ? '🇩🇪' : '🇫🇷'}
+              </span>
             </button>
-            <AnimatePresence>
-              {langDropdownOpen && supportedList.length > 0 && (
-                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.15 }}
-                  className={`absolute top-full mt-2 min-w-[140px] py-1 rounded-xl shadow-lg border border-white/20 z-50 ${locale === 'ar' ? 'right-0' : 'left-0'}`}
-                  style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', color: '#1f2937' }}
-                >
-                  {supportedList.map((opt) => (
-                    <button key={opt.code} type="button" onClick={() => { setLocale(opt.code); setLangDropdownOpen(false); }}
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-sm hover:bg-black/5 transition-colors"
-                      style={{ direction: opt.code === 'ar' ? 'rtl' : 'ltr' }}
-                    >
-                      <span>{locale === 'ar' && opt.labelAr ? opt.labelAr : opt.label}</span>
-                      {locale === opt.code && <Check className="w-4 h-4 shrink-0" style={{ color: primaryColor }} strokeWidth={2.5} />}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
         {(() => {
@@ -415,6 +418,49 @@ export function ModernTheme({
             </div>
           ) : null;
         })()}
+      </div>
+
+      {/* Dil dropdown — hero dışında, overflow:hidden yok */}
+      <div className={`absolute top-16 ${locale === 'ar' ? 'left-4' : 'right-10'} z-50`}>
+        <AnimatePresence>
+          {langDropdownOpen && supportedList.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="w-44 py-1.5 rounded-2xl shadow-xl overflow-hidden"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.96)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(0,0,0,0.08)',
+              }}
+            >
+              {supportedList.map((opt) => {
+                const flag = opt.code === 'tr' ? '🇹🇷' : opt.code === 'en' ? '🇬🇧' : opt.code === 'ar' ? '🇸🇦' : opt.code === 'de' ? '🇩🇪' : '🇫🇷';
+                const isActive = locale === opt.code;
+                return (
+                  <button
+                    key={opt.code}
+                    type="button"
+                    onClick={() => { setLocale(opt.code); setLangDropdownOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                    style={{
+                      direction: opt.code === 'ar' ? 'rtl' : 'ltr',
+                      backgroundColor: isActive ? `${primaryColor}15` : 'transparent',
+                      color: isActive ? primaryColor : '#1f2937',
+                      fontWeight: isActive ? 600 : 400,
+                    }}
+                  >
+                    <span className="text-lg leading-none">{flag}</span>
+                    <span className="text-sm">{locale === 'ar' && opt.labelAr ? opt.labelAr : opt.label}</span>
+                    {isActive && <Check className="w-3.5 h-3.5 ml-auto shrink-0" strokeWidth={2.5} />}
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <StickyHierarchicalMenu
@@ -788,7 +834,7 @@ export function ModernTheme({
                       className="flex flex-col items-center gap-0.5 pb-1"
                     >
                       <span className="text-xs font-medium tracking-widest uppercase" style={{ color: primaryColor, opacity: 0.65 }}>
-                        Masada Gör
+                        {locale === 'tr' ? 'Masada Gör' : locale === 'ar' ? 'عرض على الطاولة' : locale === 'de' ? 'Am Tisch ansehen' : locale === 'fr' ? 'Voir sur la table' : 'View on Table'}
                       </span>
                       <motion.div animate={{ y: [0, 4, 0] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}>
                         <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
@@ -802,18 +848,18 @@ export function ModernTheme({
                   {getProductDescription(selectedProductForModal) && <p className="text-base leading-relaxed" style={{ color: textColor, opacity: 0.8 }}>{getProductDescription(selectedProductForModal)}</p>}
 
                   <div className="pt-4 border-t" style={{ borderColor: `${textColor}20` }}>
-                    <h3 className="text-lg font-semibold mb-3" style={{ color: primaryColor }}>{locale === 'tr' ? 'Alerjenler' : locale === 'ar' ? 'مسببات الحساسية' : 'Allergens'}</h3>
+                    <h3 className="text-lg font-semibold mb-3" style={{ color: primaryColor }}>{locale === 'tr' ? 'Alerjenler' : locale === 'ar' ? 'مسببات الحساسية' : locale === 'de' ? 'Allergene' : locale === 'fr' ? 'Allergènes' : 'Allergens'}</h3>
                     {selectedProductForModal.allergens && selectedProductForModal.allergens.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {getAllergensByKeys(selectedProductForModal.allergens).map((a) => (
                           <div key={a.key} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: `${primaryColor}15`, border: `1px solid ${primaryColor}30` }}>
                             <span className="text-xl">{a.icon}</span>
-                            <span className="text-sm font-medium" style={{ color: textColor }}>{a.label}</span>
+                            <span className="text-sm font-medium" style={{ color: textColor }}>{getAllergenLabel(a.key, locale)}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm italic" style={{ color: textColor, opacity: 0.6 }}>{locale === 'tr' ? 'Bu üründe alerjen bilgisi girilmemiştir.' : 'No allergen information entered.'}</p>
+                      <p className="text-sm italic" style={{ color: textColor, opacity: 0.6 }}>{locale === 'tr' ? 'Bu üründe alerjen bilgisi girilmemiştir.' : locale === 'ar' ? 'لا توجد معلومات عن مسببات الحساسية.' : locale === 'de' ? 'Keine Allergeninformationen eingegeben.' : locale === 'fr' ? 'Aucune information sur les allergènes.' : 'No allergen information entered.'}</p>
                     )}
                   </div>
 
@@ -822,7 +868,7 @@ export function ModernTheme({
                     if (!recs.length) return null;
                     return (
                       <div className="pt-4 border-t" style={{ borderColor: `${textColor}20` }}>
-                        <h3 className="text-lg font-semibold mb-3" style={{ color: primaryColor }}>{locale === 'tr' ? 'Yanına Ne İyi Gider?' : 'What Goes Well With It?'}</h3>
+                        <h3 className="text-lg font-semibold mb-3" style={{ color: primaryColor }}>{locale === 'tr' ? 'Yanına Ne İyi Gider?' : locale === 'ar' ? 'ماذا يناسبه؟' : locale === 'de' ? 'Was passt dazu?' : locale === 'fr' ? 'Qu\'est-ce qui va bien avec ?' : 'What Goes Well With It?'}</h3>
                         <div className="flex gap-3 overflow-x-auto pb-2">
                           {recs.map((rp) => (
                             <div key={rp.id} onClick={() => setSelectedProductForModal(rp)} className="flex-shrink-0 w-32 cursor-pointer group">
@@ -843,8 +889,8 @@ export function ModernTheme({
                     const isIOS = typeof window !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
                     const btnStyle = { background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}DD 100%)` };
                     const btnClass = "w-full mt-6 py-4 px-6 rounded-xl font-semibold text-white transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-70";
-                    const label = locale === 'tr' ? 'Masada Gör' : locale === 'ar' ? 'عرض على الطاولة' : 'View on Table';
-                    const loadingLabel = locale === 'tr' ? 'Yükleniyor...' : locale === 'ar' ? 'جارٍ التحميل...' : 'Loading...';
+                    const label = locale === 'tr' ? 'Masada Gör' : locale === 'ar' ? 'عرض على الطاولة' : locale === 'de' ? 'Am Tisch ansehen' : locale === 'fr' ? 'Voir sur la table' : 'View on Table';
+                    const loadingLabel = locale === 'tr' ? 'Yükleniyor...' : locale === 'ar' ? 'جارٍ التحميل...' : locale === 'de' ? 'Wird geladen...' : locale === 'fr' ? 'Chargement...' : 'Loading...';
                     if (isIOS && usdzUrl) {
                       const poster = getProductImageUrl(selectedProductForModal.image_url, selectedProductForModal.image_path);
                       return (
@@ -858,7 +904,7 @@ export function ModernTheme({
                             }
                           </button>
                           <p className="mt-2 text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>
-                            {locale === 'tr' ? ' Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : '📱 Tap the button and point your camera at the table'}
+                            {locale === 'tr' ? '📱 Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : locale === 'de' ? '📱 Tippen Sie den Button und richten Sie Ihre Kamera auf den Tisch' : locale === 'fr' ? '📱 Appuyez sur le bouton et pointez votre caméra vers la table' : '📱 Tap the button and point your camera at the table'}
                           </p>
                         </div>
                       );
@@ -874,7 +920,7 @@ export function ModernTheme({
                           }
                         </button>
                         <p className="mt-2 text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>
-                          {locale === 'tr' ? ' Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : '📱 Tap the button and point your camera at the table'}
+                          {locale === 'tr' ? '📱 Butona tıklayın, kameranızı masaya yöneltin' : locale === 'ar' ? '📱 اضغط الزر ووجّه كاميرتك نحو الطاولة' : locale === 'de' ? '📱 Tippen Sie den Button und richten Sie Ihre Kamera auf den Tisch' : locale === 'fr' ? '📱 Appuyez sur le bouton et pointez votre caméra vers la table' : '📱 Tap the button and point your camera at the table'}
                         </p>
                       </div>
                     );
