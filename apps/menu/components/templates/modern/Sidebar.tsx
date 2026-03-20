@@ -9,6 +9,8 @@ interface Category {
   name: string;
   name_en?: string | null;
   name_ar?: string | null;
+  name_de?: string | null;
+  name_fr?: string | null;
   sort_order: number;
 }
 
@@ -24,7 +26,7 @@ interface SidebarProps {
   categories: Category[];
   activeCategoryId: string | null;
   onCategoryClick: (categoryId: string) => void;
-  locale: 'tr' | 'en' | 'ar';
+  locale: 'tr' | 'en' | 'ar' | 'de' | 'fr';
   primaryColor?: string;
   cardColor?: string;
   textColor?: string;
@@ -32,24 +34,19 @@ interface SidebarProps {
 }
 
 const translations = {
-  tr: {
-    allCategories: "Tüm Kategoriler",
-    contactAndSocial: "İletişim & Sosyal Medya",
-  },
-  en: {
-    allCategories: "All Categories",
-    contactAndSocial: "Contact & Social",
-  },
-  ar: {
-    allCategories: "جميع الفئات",
-    contactAndSocial: "اتصل ووسائل التواصل",
-  },
+  tr: { allCategories: "Tüm Kategoriler", contactAndSocial: "İletişim & Sosyal Medya" },
+  en: { allCategories: "All Categories", contactAndSocial: "Contact & Social" },
+  ar: { allCategories: "جميع الفئات", contactAndSocial: "اتصل ووسائل التواصل" },
+  de: { allCategories: "Alle Kategorien", contactAndSocial: "Kontakt & Soziale Medien" },
+  fr: { allCategories: "Toutes les catégories", contactAndSocial: "Contact & Réseaux sociaux" },
 };
 
 // Helper function to get category name based on locale
-const getCategoryName = (category: Category, locale: 'tr' | 'en' | 'ar'): string => {
+const getCategoryName = (category: Category, locale: 'tr' | 'en' | 'ar' | 'de' | 'fr'): string => {
   if (locale === 'en' && category.name_en) return category.name_en;
   if (locale === 'ar' && category.name_ar) return category.name_ar;
+  if (locale === 'de' && category.name_de) return category.name_de;
+  if (locale === 'fr' && category.name_fr) return category.name_fr;
   return category.name;
 };
 
@@ -168,7 +165,7 @@ export function Sidebar({
                 >
                   <MapPin className="w-4 h-4" />
                   <span className="text-[0.6rem] font-montserrat">
-                    {locale === 'tr' ? 'Google Yorumları' : locale === 'ar' ? 'تقييمات Google' : 'Google Reviews'}
+                    {locale === 'tr' ? 'Google Yorumları' : locale === 'ar' ? 'تقييمات Google' : locale === 'de' ? 'Google-Bewertungen' : locale === 'fr' ? 'Avis Google' : 'Google Reviews'}
                   </span>
                 </a>
               )}
