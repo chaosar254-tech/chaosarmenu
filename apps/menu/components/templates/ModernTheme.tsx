@@ -176,8 +176,6 @@ export function ModernTheme({
   const categoryRefs = useRef<{ [key: string]: HTMLElement | null }>({});
   const subSectionRefs = useRef<{ [catId: string]: { [subId: string]: HTMLElement | null } }>({});
   const langDropdownRef = useRef<HTMLDivElement>(null);
-  const stickyNavRef = useRef<HTMLDivElement>(null);
-  const isManualScrolling = useRef(false);
 
   const supportedList = LANGUAGE_OPTIONS.filter((o) => supportedLanguages.includes(o.code));
   const supportedListKey = supportedLanguages.join(',');
@@ -250,14 +248,12 @@ export function ModernTheme({
   // Scroll Spy
   useEffect(() => {
     if (categories.length === 0) return;
+    const stickyBarHeight = 56;
+    const triggerOffset = stickyBarHeight + 24;
     let rafId: number | null = null;
 
-    const getStickyHeight = () => stickyNavRef.current?.getBoundingClientRect().height ?? 96;
-
     const updateActiveFromScroll = () => {
-      if (isManualScrolling.current) return;
       if (window.scrollY < 80) { setActiveCategoryId(null); return; }
-      const triggerOffset = getStickyHeight() + 16;
       const orderedIds = [...categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((c) => c.id);
       let activeId: string | null = null;
       for (const id of orderedIds) {
@@ -326,27 +322,22 @@ export function ModernTheme({
     }
   };
 
-  const scrollToEl = (el: HTMLElement) => {
-    const stickyHeight = stickyNavRef.current?.getBoundingClientRect().height ?? 96;
-    const top = el.getBoundingClientRect().top + window.scrollY - stickyHeight - 8;
-    isManualScrolling.current = true;
-    window.scrollTo({ top, behavior: 'smooth' });
-    setTimeout(() => { isManualScrolling.current = false; }, 800);
-  };
-
   const handleCategoryClick = (categoryId: string) => {
     setActiveCategoryId(categoryId);
     const el = categoryRefs.current[categoryId];
-    if (el) scrollToEl(el);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleSubChange = (categoryId: string, subId: 'all' | string) => {
     setSubFilters((prev) => ({ ...prev, [categoryId]: subId }));
     setTimeout(() => {
-      const el = subId === 'all'
-        ? categoryRefs.current[categoryId]
-        : subSectionRefs.current[categoryId]?.[subId];
-      if (el) scrollToEl(el);
+      if (subId === 'all') {
+        const el = categoryRefs.current[categoryId];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        const el = subSectionRefs.current[categoryId]?.[subId];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }, 50);
   };
 
@@ -472,16 +463,14 @@ export function ModernTheme({
         </AnimatePresence>
       </div>
 
-      <div ref={stickyNavRef}>
-        <StickyHierarchicalMenu
-          categories={hierarchicalCategories}
-          activeCategoryId={activeCategoryId}
-          onCategoryClick={handleCategoryClick}
-          onSubChange={handleSubChange}
-          primaryColor={primaryColor}
-          bgColor={bgColor}
-        />
-      </div>
+      <StickyHierarchicalMenu
+        categories={hierarchicalCategories}
+        activeCategoryId={activeCategoryId}
+        onCategoryClick={handleCategoryClick}
+        onSubChange={handleSubChange}
+        primaryColor={primaryColor}
+        bgColor={bgColor}
+      />
 
       <div className="flex flex-col lg:flex-row">
         <Sidebar
