@@ -95,11 +95,11 @@ export function StickyHierarchicalMenu({
                 key={cat.id}
                 ref={(el) => { buttonRefs.current[cat.id] = el }}
                 type="button"
-                onClick={() => onCategoryClick(cat.id)}
+                onPointerDown={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); onCategoryClick(cat.id); }}
                 style={
                   isActive
-                    ? { backgroundColor: primaryColor, borderColor: primaryColor, color: '#fff' }
-                    : { backgroundColor: 'transparent', borderColor: `${primaryColor}30`, color: primaryColor }
+                    ? { backgroundColor: primaryColor, borderColor: primaryColor, color: '#fff', touchAction: 'manipulation' }
+                    : { backgroundColor: 'transparent', borderColor: `${primaryColor}30`, color: primaryColor, touchAction: 'manipulation' }
                 }
                 className="shrink-0 rounded-2xl px-4 py-1.5 text-sm font-medium border transition-all duration-200 whitespace-nowrap tracking-tight"
               >
@@ -118,11 +118,11 @@ export function StickyHierarchicalMenu({
         >
           <button
             type="button"
-            onClick={() => handleSubClick('all')}
+            onPointerDown={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); handleSubClick('all'); }}
             style={
               activeSubId === 'all'
-                ? { backgroundColor: primaryColor, color: '#fff', borderColor: primaryColor }
-                : { backgroundColor: 'transparent', color: primaryColor, borderColor: `${primaryColor}40` }
+                ? { backgroundColor: primaryColor, color: '#fff', borderColor: primaryColor, touchAction: 'manipulation' }
+                : { backgroundColor: 'transparent', color: primaryColor, borderColor: `${primaryColor}40`, touchAction: 'manipulation' }
             }
             className="shrink-0 rounded-xl px-3 py-1 text-xs font-semibold border transition-all duration-150 tracking-wide whitespace-nowrap"
           >
@@ -138,11 +138,11 @@ export function StickyHierarchicalMenu({
                 exit={{ opacity: 0, scale: 0.85 }}
                 transition={{ duration: 0.12 }}
                 type="button"
-                onClick={() => handleSubClick(sub.id)}
+                onPointerDown={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); handleSubClick(sub.id); }}
                 style={
                   activeSubId === sub.id
-                    ? { backgroundColor: primaryColor, color: '#fff', borderColor: primaryColor }
-                    : { backgroundColor: 'transparent', color: primaryColor, borderColor: `${primaryColor}40` }
+                    ? { backgroundColor: primaryColor, color: '#fff', borderColor: primaryColor, touchAction: 'manipulation' }
+                    : { backgroundColor: 'transparent', color: primaryColor, borderColor: `${primaryColor}40`, touchAction: 'manipulation' }
                 }
                 className="shrink-0 rounded-xl px-3 py-1 text-xs font-semibold border transition-all duration-150 whitespace-nowrap"
               >
