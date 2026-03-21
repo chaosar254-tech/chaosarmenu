@@ -95,7 +95,7 @@ export function StickyHierarchicalMenu({
                 key={cat.id}
                 ref={(el) => { buttonRefs.current[cat.id] = el }}
                 type="button"
-                onPointerDown={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); onCategoryClick(cat.id); }}
+                onClick={() => onCategoryClick(cat.id)}
                 style={
                   isActive
                     ? { backgroundColor: primaryColor, borderColor: primaryColor, color: '#fff', touchAction: 'manipulation' }
@@ -118,7 +118,7 @@ export function StickyHierarchicalMenu({
         >
           <button
             type="button"
-            onPointerDown={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); handleSubClick('all'); }}
+            onClick={() => handleSubClick('all')}
             style={
               activeSubId === 'all'
                 ? { backgroundColor: primaryColor, color: '#fff', borderColor: primaryColor, touchAction: 'manipulation' }
@@ -138,7 +138,7 @@ export function StickyHierarchicalMenu({
                 exit={{ opacity: 0, scale: 0.85 }}
                 transition={{ duration: 0.12 }}
                 type="button"
-                onPointerDown={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); handleSubClick(sub.id); }}
+                onClick={() => handleSubClick(sub.id)}
                 style={
                   activeSubId === sub.id
                     ? { backgroundColor: primaryColor, color: '#fff', borderColor: primaryColor, touchAction: 'manipulation' }
