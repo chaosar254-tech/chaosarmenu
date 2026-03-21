@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Box, Share2 } from "lucide-react";
 import { ProductImage } from "./ProductImage";
 import { getAllergensByKeys } from "@/lib/allergens";
@@ -59,6 +59,18 @@ export function MenuItemCard({
   const textAlign = locale === 'ar' ? 'text-right' : 'text-left';
   const isAvailable = item.is_available !== false;
 
+  const [showHint, setShowHint] = useState(true);
+
+  useEffect(() => {
+    const handler = () => setShowHint(false);
+    window.addEventListener('menuHintDismissed', handler);
+    return () => window.removeEventListener('menuHintDismissed', handler);
+  }, []);
+
+  const dismissHint = () => {
+    window.dispatchEvent(new Event('menuHintDismissed'));
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -72,7 +84,7 @@ export function MenuItemCard({
       }`}
       style={{ backgroundColor: cardColor, borderColor: 'rgba(0,0,0,0.1)' }}
       dir={textDirection}
-      onClick={() => isAvailable && onItemClick(item)}
+      onClick={() => { dismissHint(); isAvailable && onItemClick(item); }}
     >
       {!isAvailable && (
         <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold z-10">
@@ -80,27 +92,38 @@ export function MenuItemCard({
         </div>
       )}
 
-      {isAvailable && (
-        <motion.div
-          className="absolute bottom-2 right-2 pointer-events-none z-10"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.6, 0] }}
-          transition={{ duration: 2, delay: 0.8, repeat: 2, ease: 'easeInOut' }}
-        >
+      {isAvailable && showHint && (
+        <AnimatePresence>
           <motion.div
-            className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
-            style={{ borderColor: primaryColor }}
-            animate={{ scale: [1, 1.3, 1] }}
-            transition={{ duration: 2, delay: 0.8, repeat: 2, ease: 'easeInOut' }}
+            className="touch-hint absolute bottom-2 right-2 pointer-events-none z-10 flex flex-col items-center gap-0.5"
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.6 }}
+            transition={{ delay: 0.4, duration: 0.3 }}
           >
             <motion.div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: primaryColor }}
-              animate={{ scale: [1, 0.7, 1] }}
-              transition={{ duration: 2, delay: 0.8, repeat: 2, ease: 'easeInOut' }}
-            />
+              animate={{ y: [0, -4, 0], opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <svg width="18" height="26" viewBox="0 0 18 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* İşaret parmağı */}
+                <rect x="6" y="0" width="6" height="17" rx="3" fill={primaryColor}/>
+                {/* Yumruk / avuç */}
+                <rect x="1" y="13" width="15" height="11" rx="5" fill={primaryColor}/>
+                {/* Başparmak */}
+                <rect x="14" y="10" width="4" height="9" rx="2" fill={primaryColor}/>
+                {/* Tırnak detayı */}
+                <rect x="7.5" y="1.5" width="3" height="4" rx="1.5" fill="white" opacity="0.25"/>
+              </svg>
+            </motion.div>
+            <span
+              className="text-[10px] font-bold tracking-wider font-montserrat"
+              style={{ color: primaryColor, textShadow: '0 0 8px rgba(0,0,0,0.15)' }}
+            >
+              {locale === 'ar' ? 'اضغط' : locale === 'de' ? 'TIPPEN' : locale === 'fr' ? 'TOUCHER' : locale === 'en' ? 'TAP' : 'DOKUN'}
+            </span>
           </motion.div>
-        </motion.div>
+        </AnimatePresence>
       )}
 
       <div className="flex-shrink-0 group-hover:brightness-110 transition-all duration-300">

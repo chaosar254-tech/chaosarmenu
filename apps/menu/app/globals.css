@@ -26,3 +26,10 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Touch hint: sadece touch cihazlarda göster */
+@media (pointer: fine) {
+  .touch-hint {
+    display: none !important;
+  }
+}
+

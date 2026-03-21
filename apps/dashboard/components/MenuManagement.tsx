@@ -563,12 +563,17 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       // Reset form data
       setItemFormData({
         category_id: '',
+        subcategory_id: '',
         name: '',
         name_en: '',
         name_ar: '',
+        name_de: '',
+        name_fr: '',
         description: '',
         description_en: '',
         description_ar: '',
+        description_de: '',
+        description_fr: '',
         price: '',
         sort_order: '',
         is_active: true,
@@ -705,6 +710,7 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       // Reset form data
       setItemFormData({
         category_id: '',
+        subcategory_id: '',
         name: '',
         description: '',
         price: '',
@@ -930,8 +936,12 @@ export default function MenuManagement({ restaurantId, restaurantPlan }: MenuMan
       model_usdz: '',
       name_en: '',
       name_ar: '',
+      name_de: '',
+      name_fr: '',
       description_en: '',
       description_ar: '',
+      description_de: '',
+      description_fr: '',
     })
     setShowItemModal(true)
   }
