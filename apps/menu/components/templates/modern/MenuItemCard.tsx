@@ -37,10 +37,12 @@ interface MenuItemCardProps {
   textColor?: string;
 }
 
-const translations = {
+const translations: Record<string, { outOfStock: string; viewOnTable: string }> = {
   tr: { outOfStock: "Tükendi", viewOnTable: "Masanın Üstünde Gör" },
   en: { outOfStock: "Out of Stock", viewOnTable: "View on Table" },
   ar: { outOfStock: "نفد", viewOnTable: "عرض على الطاولة" },
+  de: { outOfStock: "Ausverkauft", viewOnTable: "Am Tisch ansehen" },
+  fr: { outOfStock: "Épuisé", viewOnTable: "Voir sur la table" },
 };
 
 export function MenuItemCard({
