@@ -176,6 +176,7 @@ export function ModernTheme({
   const categoryRefs = useRef<{ [key: string]: HTMLElement | null }>({});
   const subSectionRefs = useRef<{ [catId: string]: { [subId: string]: HTMLElement | null } }>({});
   const langDropdownRef = useRef<HTMLDivElement>(null);
+  const isManualScrolling = useRef(false);
 
   const supportedList = LANGUAGE_OPTIONS.filter((o) => supportedLanguages.includes(o.code));
   const supportedListKey = supportedLanguages.join(',');
@@ -253,6 +254,7 @@ export function ModernTheme({
     let rafId: number | null = null;
 
     const updateActiveFromScroll = () => {
+      if (isManualScrolling.current) return;
       if (window.scrollY < 80) { setActiveCategoryId(null); return; }
       const orderedIds = [...categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((c) => c.id);
       let activeId: string | null = null;
@@ -325,7 +327,11 @@ export function ModernTheme({
   const handleCategoryClick = (categoryId: string) => {
     setActiveCategoryId(categoryId);
     const el = categoryRefs.current[categoryId];
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (el) {
+      isManualScrolling.current = true;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => { isManualScrolling.current = false; }, 1000);
+    }
   };
 
   const handleSubChange = (categoryId: string, subId: 'all' | string) => {
